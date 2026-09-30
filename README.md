@@ -1,6 +1,8 @@
 # ODD HAUS: LITTLE SHADOWS
 
 리틀 나이트메어 스타일의 퍼즐·스텔스 어드벤처. **실제 3D 게임**이며, 카메라만 2.5D 사이드뷰로 운용합니다.
+
+**▶ 플레이: https://gjswls315-collab.github.io/ODD-HAUS-LITTLE-SHADOWS/** (GitHub Pages — 이 브랜치에 푸시할 때마다 1–2분 뒤 자동으로 최신 버전으로 바뀝니다. 이전 버전은 `…/versions/ODD_HAUS_LITTLE_SHADOWS_vX.Y.html`)
 `index.html`을 브라우저로 열면 바로 실행됩니다. 현재 빌드는 캐릭터 선택(5인) → 프롤로그 · 01 LOUNGE · 02 LP LIBRARY · Bully 매복 추격 · 03 STUDIO(Buddy 추격)까지 이어집니다. 그래픽·사운드는 모두 코드로 생성하고, 3D 엔진(Three.js r160)만 CDN(`cdn.jsdelivr.net`)에서 받습니다. 인터넷 연결이 필요합니다.
 
 ## 버전 규칙
