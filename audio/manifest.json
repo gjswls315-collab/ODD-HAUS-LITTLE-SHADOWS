@@ -1,0 +1,14 @@
+{
+  "version": "2.4",
+  "_help": "여기 적힌 파일만 불러온다. 파일을 audio/ 아래에 넣고 슬롯 이름에 경로를 적으면 된다. 목록에 없는 슬롯은 절차 합성으로 자동 대체된다. 슬롯 목록은 audio/README.md 참고.",
+  "music": {
+    "title": "music/title_odd_haus.mp3",
+    "lounge": "music/stage01_lounge.mp3",
+    "library": "music/stage02_lp_library.mp3",
+    "studio": "music/stage03_studio.mp3",
+    "djbooth": "music/stage04_dj_booth.mp3",
+    "locked": "music/stage06_locked_room.mp3"
+  },
+  "amb": {},
+  "sfx": {}
+}
