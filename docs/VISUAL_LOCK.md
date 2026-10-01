@@ -120,3 +120,9 @@
 - 스튜디오 동선을 Visual Lock의 "케이블 → 앰프 → 데스크 → 믹서 → 유리 부스 → 컨트롤 룸" 순서로 다시 짜기(지금은 케이블 → 라이저 → 케이스 → 환풍구 + 키보드 · 부스 · 콘센트).
 - 서고 "중간 선반" 정지 지점.
 - 최종 GLB 모델 (받으면 `assets/models/` 에 넣기만 하면 된다).
+
+## v2.7 갱신
+
+- **에셋 경로가 바뀌었다** — `assets/models/` + `manifest.json` 대신 `assets/characters/<캐릭터>/` · `assets/environment/<스테이지>/` 에 정해진 이름으로 넣기만 하면 된다(목록 파일 없음). 위 표의 `assets/models/chr_vin.glb` → `assets/characters/vin/chr_vin.glb`, `env_lounge.glb` → `assets/environment/lounge/env_lounge.glb` … 전체 표는 [assets/README.md](../assets/README.md).
+- 위 "아직 남은 것" 중 **04 · 05 · 06 스테이지**와 **스튜디오 동선(케이블 → 앰프 → 데스크 → 믹서 → 유리 부스 → 컨트롤 룸)** 은 v2.7에서 만들었다 — [STAGES_v2.7.md](STAGES_v2.7.md).
+- 화면 명암 비율(같은 측정): 03 스튜디오 0.79 · 컨트롤 룸 0.64 · 04 DJ BOOTH 0.86–0.89(거의 검은 방 — LED 튜브 · 벽 번짐 · 주황 계단 엣지로 발판을 읽게) · 05 테라스 0.78–0.79 · 06 잠긴 방 0.64–0.84.
