@@ -5,7 +5,9 @@
 코드도, 목록 파일도 고칠 필요가 없다. 파일이 없거나 불러오지 못하면 PLACEHOLDER를 그대로 쓴다(게임은 멈추지 않는다).
 
 웹(GitHub Pages)이나 로컬 서버로 열 때만 불러온다. `index.html`을 더블클릭해 `file://`로 열면 브라우저 보안 때문에 PLACEHOLDER만 쓴다.
-브라우저 콘솔의 `404 (… .glb)` 줄은 "아직 없는 GLB를 확인했다"는 뜻이다(정상). 콘솔에는 `[ODD HAUS] Missing GLB Asset List` 로 아직 없는 파일 목록이 나온다.
+GitHub Pages에서는 저장소 파일 목록을 한 번만 받아(GitHub API, 요청 1번 · 10분 캐시) 있는 GLB만 요청한다 → 없는 파일 때문에 콘솔에 404 줄이 생기지 않는다.
+다른 서버(로컬 서버 · 다른 호스팅)이거나 GitHub API 요청 한도를 넘으면 예전처럼 파일마다 확인한다 — 이때 콘솔의 `404 (… .glb)` 줄은 "아직 없는 GLB를 확인했다"는 뜻이다(정상).
+콘솔에는 `[ODD HAUS] Missing GLB Asset List` 로 아직 없는 파일 목록이 나온다.
 
 ## 캐릭터 (CHARACTER_ASSETS)
 
@@ -57,6 +59,15 @@ PlayerRoot                 BuddyRoot
 - glTF 2.0 바이너리(`.glb`), **1 unit = 1 m**(실제 크기), **+Y 위**, **정면 = +Z**(카메라 쪽), 발바닥(또는 바닥면) = 원점.
 - 캐릭터는 위 표의 키로 만든다.
 - 환경 GLB는 **게임 좌표 그대로**(x = 왼쪽→오른쪽 진행 방향, z = 안쪽이 −, 바닥 y = 0) 배치한다.
-- 캐릭터 애니메이션 클립 이름이 아래와 같으면 상태에 맞춰 자동으로 재생한다(없는 클립은 `idle`로 대체, 클립이 아예 없어도 된다):
-  `idle` · `walk` · `run` · `jump` · `crouch` · `crawl` · `hang` · `climb` · `push` — NPC는 `idle` · `walk` · `run`.
-  (권장 애니메이션 목록 전체 — Jump Start · Fall · Land · Pull · Ledge Hang · Hide와 캐릭터별 Listen · Dash · Charge · Unlock · Royal Pose · Sniff · Bark · Guide · Search 등 — 은 다음 단계에서 클립 이름으로 연결한다.)
+- 캐릭터 애니메이션 클립 이름이 아래와 같으면 상태에 맞춰 자동으로 재생한다. 대소문자 · 공백 · `_` · `-` · `.`은 무시한다(`Jump Start` = `jump_start` = `JumpStart`).
+  없는 클립은 다음 후보 → 마지막엔 `idle`로 대체하고, 클립이 아예 없어도 된다.
+
+  | 대상 | 상태 → 클립 이름 (왼쪽이 먼저) |
+  |---|---|
+  | 주인공 5인 | 서 있기 `idle` (5초 넘게 가만히 `idle_b` · Rex `royal_pose`) · 걷기 `walk` · 달리기 `run` (Rex `heavy_run`) · 점프 시작 `jump_start` → `jump` · 떨어짐 `fall` → `jump` · 착지 `land` (Rex `heavy_land`) · 숙이기 `crouch` · 기기 `crawl` · 숨기 `hide` · 매달리기 `ledge_hang` → `hang` · 오르기 `climb` → `ledge_climb` · 밀기 `push` · 당기기 `pull` · 장치 조작(E 길게) `interact` (Locke `unlock` · A.A. `connect`) · 잡힘 `surprised` |
+  | 능력 (Q) | Vin `listen` · Picker `dash` · A.A. `power_release` → `charge` · Rex `scepter_use` → `pressure` · Locke `inspect` → `look_around` |
+  | Buddy | `idle` · `walk` · `trot` · `run` · `sniff` · `sit`(기다림) · `bark` · `alert` · `guide` · `happy` · `jump` · `stun` · `bite` |
+  | Mr. ODD | `idle` · `walk` · `search` · `look_down` · `reach`(램프 · 물건) · `turn` · `surprised` |
+  | Bully | `idle` · `walk` · `run` · `chase` · `guitar_hit` · `search` · `stumble` · `grab` · `taunt` |
+
+  v2.8에서 클립 47개(주인공 18 · Buddy 11 · Mr. ODD 7 · Bully 9)가 든 테스트 GLB로 상태마다 어떤 클립을 고르는지, 실제 키 입력으로 걷기 · 달리기 · 점프 · 떨어짐 · 착지 · 숙이기 · 기기 때 그 클립이 재생되는지 확인했다.
