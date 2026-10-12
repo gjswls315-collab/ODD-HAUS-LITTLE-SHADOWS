@@ -1,6 +1,9 @@
 # assets/ — 최종 3D 모델(GLB) 넣는 곳
 
-지금 게임은 모든 캐릭터와 공간을 **코드로 만든 실제 3D 모델(PLACEHOLDER)** 로 그린다.
+> **현재 상태는 [docs/ASSET_STATUS.md](../docs/ASSET_STATUS.md)** — 저장소에 실제로 있는 GLB 파일로 만든 표다.
+> GLB 파일이 없으면 그 캐릭터 · 맵은 **미완성**이다. 코드로 만든 PLACEHOLDER는 완성품으로 세지 않는다 ([CLAUDE.md](../CLAUDE.md)).
+
+GLB가 없는 캐릭터와 공간은 **코드로 만든 3D 모델(PLACEHOLDER)** 로 그린다.
 최종 GLB가 준비되면 **아래 경로에 그 이름 그대로 넣기만 하면** 다음 실행부터 PLACEHOLDER 대신 그 모델이 나온다.
 코드도, 목록 파일도 고칠 필요가 없다. 파일이 없거나 불러오지 못하면 PLACEHOLDER를 그대로 쓴다(게임은 멈추지 않는다).
 
@@ -26,7 +29,7 @@ GitHub Pages에서는 저장소 파일 목록을 한 번만 받아(GitHub API, �
 
 | 경로 | 스테이지 | 지금 쓰는 것 | 게임 좌표(x) |
 |---|---|---|---|
-| `assets/environment/lounge/env_lounge.glb` | 00 ENTRANCE + 01 LOUNGE | 코드로 지은 집 | −99 … 14.1 |
+| `assets/environment/lounge/env_lounge.glb` | 01 LOUNGE (거실 방 안 — v2.9부터 현관 · 양쪽 칸막이 벽 · 문은 코드 그대로) | 코드로 지은 집 | 0.07 … 13.95 |
 | `assets/environment/lp-library/env_lp_library.glb` | 복도 + 02 LP LIBRARY + 추격 복도 | 코드로 지은 집 | 14.1 … 50.6 |
 | `assets/environment/studio/env_studio.glb` | 03 STUDIO + 컨트롤 룸 | 코드로 지은 집 | 50.6 … 70.2 |
 | `assets/environment/dj-booth/env_dj_booth.glb` | 04 DJ BOOTH | `buildDJBoothGraybox()` | 194.4 … 205.4 |
@@ -57,7 +60,11 @@ PlayerRoot                 BuddyRoot
 ## 모델 규칙
 
 - glTF 2.0 바이너리(`.glb`), **1 unit = 1 m**(실제 크기), **+Y 위**, **정면 = +Z**(카메라 쪽), 발바닥(또는 바닥면) = 원점.
-- 캐릭터는 위 표의 키로 만든다.
+- 캐릭터는 위 표의 키로 만든다. 불러올 때 키(또는 `extras.marker = 'height' | 'shoulder'` 표식 높이)를 재서 기준과 **15% 넘게 다르면 쓰지 않는다**(PLACEHOLDER 유지, `?visualtest=1`에 REJECTED).
+- **v2.9 리그 연결**: 노드에 `extras.link = '<게임 리그 이름>'`(예: Vin `body` · `eye0` · `shoe0` · `arm0_3`, Bully `hip0` · `knee0` · `head` · `guitar`)이 있으면
+  그 노드를 게임 리그의 같은 이름 객체 밑으로 옮겨 붙인다 → 게임의 절차 애니메이션(발 고정 · 매달린 손 · IK · 추격)이 GLB를 그대로 움직인다.
+  GLB는 게임 리그의 묶음 자세(bind pose) 그대로 만들어야 한다 — [tools/glb/](../tools/glb/)가 게임에서 직접 만든다.
+- 환경 GLB 메시의 `extras.matRef = 'shade' | 'ember' | 'DR.shade'`는 게임이 밝기를 바꾸는 재질(램프 갓이 꺼지는 것 · 잔불 깜빡임)로 이어 붙인다.
 - 환경 GLB는 **게임 좌표 그대로**(x = 왼쪽→오른쪽 진행 방향, z = 안쪽이 −, 바닥 y = 0) 배치한다.
 - 캐릭터 애니메이션 클립 이름이 아래와 같으면 상태에 맞춰 자동으로 재생한다. 대소문자 · 공백 · `_` · `-` · `.`은 무시한다(`Jump Start` = `jump_start` = `JumpStart`).
   없는 클립은 다음 후보 → 마지막엔 `idle`로 대체하고, 클립이 아예 없어도 된다.

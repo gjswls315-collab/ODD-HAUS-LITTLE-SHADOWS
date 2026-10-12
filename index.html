@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>ODD HAUS: LITTLE SHADOWS</title>
-<meta name="description" content="ODD HAUS: LITTLE SHADOWS — Three.js 3D 프로토타입 v2.8 (캐릭터 8인 리모델 · Bully 추격 한 번 · 스테이지 04 DJ BOOTH · 05 TERRACE · 06 LOCKED ROOM · 동행 Buddy · GLB 자동 교체)">
+<meta name="description" content="ODD HAUS: LITTLE SHADOWS — Three.js 3D 프로토타입 v2.9 (최종 GLB: Vin · Buddy · Bully · 거실 / 나머지는 PLACEHOLDER · ?visualtest=1 비율 확인 · 카메라 구도 · 푸른 그림자)">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Nanum+Pen+Script&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
 <style>
 /* =====================================================================
-   ODD HAUS : LITTLE SHADOWS — v2.8 Three.js 3D prototype
+   ODD HAUS : LITTLE SHADOWS — v2.9 Three.js 3D prototype
    캐릭터·배경·소품·조명은 전부 실제 3D, 카메라만 2.5D 사이드뷰.
    UI 언어는 v1과 같다: 종이 · 레코드 · 카세트 · 손글씨
    ===================================================================== */
@@ -20,11 +20,11 @@
   --amber:#e3a24a; --red:#b63e2d; --red2:#c84230; --teal:#335f62; --muted:#8f98a5;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{width:100%;height:100%;background:#000;overflow:hidden;color:#f3efe8;
+html,body{width:100%;height:100%;background:#0b0d13;overflow:hidden;color:#f3efe8;
   font-family:"Noto Sans KR","Apple SD Gothic Neo",system-ui,sans-serif;
   -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
 #wrap{position:fixed;left:0;right:0;top:env(safe-area-inset-top,0px);bottom:env(safe-area-inset-bottom,0px);padding-inline:max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:#000;container-type:size}
-#stage{position:relative;flex:none;width:min(100cqw,177.78cqh);height:min(56.25cqw,100cqh);max-width:100%;container-type:size;overflow:hidden;background:#000}
+#stage{position:relative;flex:none;width:min(100cqw,177.78cqh);height:min(56.25cqw,100cqh);max-width:100%;container-type:size;overflow:hidden;background:#0b0d13}
 #rotate{display:none;font-size:13px;letter-spacing:.04em;color:#8f98a5;text-align:center}
 @media (orientation:portrait) and (max-width:760px){#rotate{display:block}}
 #game{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
@@ -292,7 +292,7 @@ button{font:inherit;color:inherit;cursor:pointer}
   <div class="screen hidden" id="title">
     <div class="logo"><span class="odd">ODD</span> <span class="haus">HAUS</span></div>
     <div class="logo2">Little Shadows</div>
-    <div><span class="badge3d">3D PROTOTYPE · v2.8</span></div>
+    <div><span class="badge3d">3D PROTOTYPE · v2.9</span></div>
     <p class="tagline">낮에는 음악이 흐르던 집. 마지막 레코드가 멈추자, 집은 익숙한 크기를 잃었다.<br><em>Vin · Picker · A.A. · Rex · Locke</em> — 키 23–35 cm의 작은 그림자들에게 실제 크기의 집은 거대한 지형이다. 잡고, 밀고, 기어오르고, 도망쳐라.</p>
     <nav class="menu" id="titleMenu">
       <button data-act="new">새로 시작하기 <small>NEW GAME</small></button>
@@ -415,7 +415,7 @@ button{font:inherit;color:inherit;cursor:pointer}
         <div><b id="endTime">00:00</b><span>PLAY TIME</span></div>
         <div><b id="endDeath">0</b><span>CAUGHT</span></div>
       </div>
-      <p>STUDIO → DJ BOOTH → TERRACE → LOCKED ROOM<br>v2.8 — 캐릭터 8인을 캐릭터 시트에 맞춰 다시 만들었습니다. 최종 GLB가 들어오면 코드 수정 없이 바뀝니다(지금은 PLACEHOLDER 3D).</p>
+      <p>STUDIO → DJ BOOTH → TERRACE → LOCKED ROOM<br>v2.9 — 최종 GLB: Vin · Buddy · Bully · 거실. Picker · A.A. · Locke · Rex · Mr. ODD와 다른 방은 아직 PLACEHOLDER(미완성). 주소 끝에 ?visualtest=1 — 캐릭터 비율 확인.</p>
       <nav class="menu"><button data-act="title">타이틀로 <small>TITLE</small></button></nav>
     </div>
   </div>
@@ -2121,8 +2121,10 @@ class Hose {
     g.setIndex(idx); g.boundingSphere = new THREE.Sphere(V3(), 1);
     this.mesh = new THREE.Mesh(g, mat); this.mesh.castShadow = true; this.mesh.frustumCulled = false;
     this._p = V3(); this._t = V3(); this._n = V3(); this._b = V3(); this._ref = V3(0, 0, 1);
+    this.A = V3(); this.C = V3(); this.B = V3();         // v2.9: 마지막 곡선(어깨/엉덩이 → 조절점 → 손/발목) — GLB 팔다리 뼈가 따라간다
   }
   update(a, c, b) {
+    this.A.copy(a); this.C.copy(c); this.B.copy(b);
     const pos = this.mesh.geometry.attributes.position.array, nor = this.mesh.geometry.attributes.normal.array;
     const P_ = this._p, Tg = this._t, N = this._n, B = this._b;
     for (let i = 0; i <= this.segs; i++) {
@@ -2159,6 +2161,30 @@ function mergeByMaterial(parent, mats) {
     const m = new THREE.Mesh(out, mat); m.castShadow = list[0].castShadow; m.receiveShadow = list[0].receiveShadow; m.name = 'merged'; parent.add(m);
     for (const o of list) parent.remove(o);
   }
+}
+/* v2.9: GLB 팔다리(스킨 튜브)용 리그 — 고무호스 곡선을 따라 놓인 뼈 HOSE_N+1개 (곡선의 접선 방향 · 늘어난 만큼 y 스케일)
+   GLB를 리그에 연결할 때만 만든다. 게임플레이와 무관 (보이는 모양만). */
+const HOSE_N = 6, HOSE_LIMBS = ['arm0', 'arm1', 'leg0', 'leg1'];
+const _hq = { p: V3(), d: V3(), x: V3(), z: V3(), ref: V3(0, 0, 1), m: new THREE.Matrix4() };
+function hosePoint(h, t, out) { const u = 1 - t; return out.set(u * u * h.A.x + 2 * u * t * h.C.x + t * t * h.B.x, u * u * h.A.y + 2 * u * t * h.C.y + t * t * h.B.y, u * u * h.A.z + 2 * u * t * h.C.z + t * t * h.B.z); }
+function hoseDeriv(h, t, out) { return out.set(2 * (1 - t) * (h.C.x - h.A.x) + 2 * t * (h.B.x - h.C.x), 2 * (1 - t) * (h.C.y - h.A.y) + 2 * t * (h.B.y - h.C.y), 2 * (1 - t) * (h.C.z - h.A.z) + 2 * t * (h.B.z - h.C.z)); }
+function hoseFrame(h, t, o) {        // 위치 = 곡선 위 점 · y축 = 접선 · y 스케일 = 접선 길이 (Hose와 같은 기준 벡터로 틀어짐 없이)
+  const Q = _hq; hosePoint(h, t, Q.p); hoseDeriv(h, t, Q.d); const len = Math.max(1e-5, Q.d.length()); Q.d.multiplyScalar(1 / len);
+  Q.x.crossVectors(Q.d, Q.ref); if (Q.x.lengthSq() < 1e-6) Q.x.set(1, 0, 0); Q.x.normalize(); Q.z.crossVectors(Q.x, Q.d).normalize();
+  Q.m.makeBasis(Q.x, Q.d, Q.z); o.position.copy(Q.p); o.quaternion.setFromRotationMatrix(Q.m); o.scale.set(1, len, 1);
+}
+function hoseRig(V) {
+  if (V.limbRig) return V.limbRig;
+  const hs = [V.arms[0], V.arms[1], V.legs[0], V.legs[1]];
+  V.limbRig = hs.map((h, li) => { const bones = []; for (let k = 0; k <= HOSE_N; k++) { const o = new THREE.Object3D(); o.name = 'rig_' + HOSE_LIMBS[li] + '_' + k; o.userData.rig = HOSE_LIMBS[li] + '_' + k; V.root.add(o); bones.push(o); } return { h, bones }; });
+  hoseRigUpdate(V); return V.limbRig;
+}
+function hoseRigUpdate(V) { if (V.limbRig) for (const L of V.limbRig) L.bones.forEach((o, k) => hoseFrame(L.h, k / HOSE_N, o)); }
+/* v2.9: 리그 이름표 — GLB 노드의 extras.link가 이 이름을 가리키면 그 객체 밑으로 옮겨 붙인다 */
+function tagRig(map) { for (const k in map) if (map[k]) map[k].userData.rig = k; }
+function tagHeroRig(V) {
+  tagRig({ root: V.root, lean: V.lean, tip: V.tip, yaw: V.yaw, body: V.body, disc: V.disc, spin: V.spin, eyes: V.eyes, eye0: V.eye[0], eye1: V.eye[1], pupil0: V.pupil[0], pupil1: V.pupil[1],
+    hand0: V.hands[0], hand1: V.hands[1], shoe0: V.shoes[0], shoe1: V.shoes[1], flash: V.flash, scepter: V.scepter, cape: V.cape, lid0: V.lids[0], lid1: V.lids[1] });
 }
 /* 임계 감쇠에 가까운 스프링 (값 · 속도를 객체에 보관) */
 /* 반암시적 오일러는 ω·dt가 크면 불안정하다 → 작은 단계로 나눠 적분 (30 fps 기기에서도 안정) */
@@ -2512,6 +2538,7 @@ function buildHero(id) {
     const c2 = new THREE.Mesh(new THREE.BoxGeometry(.011, .0035, .0035), V.m.gold); c2.position.y = .143; sc.add(c2);
     const knob = new THREE.Mesh(new THREE.SphereGeometry(.0052, 10, 8), V.m.gold); knob.position.y = -.03; sc.add(knob);
   }
+  tagHeroRig(V);
   V.root.name = { vin: 'PlaceholderVin3D', picker: 'PlaceholderPicker3D', aa: 'PlaceholderAA3D', rex: 'PlaceholderRex3D', locke: 'PlaceholderLocke3D' }[id];   // v2.6: 최종 GLB로 바뀔 자리 (04f_assets.js)
   V.root.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   V.spot = HERO_FL.spot; V.beam = HERO_FL.beam; V.lensGlow = HERO_FL.lensGlow;
@@ -2723,6 +2750,7 @@ function animateVin(V, st, dt) {
     hg.quaternion.setFromUnitVectors(V._up, dir);
   }
   V.inited = true;
+  hoseRigUpdate(V);          // v2.9: GLB 팔다리 뼈 (연결된 GLB가 있을 때만 만들어져 있다)
   // --- 손전등 빛 (활성 캐릭터만: 광원은 하나) ---
   if (V.active) {
     const on = st.light ? 1 : 0;
@@ -2897,7 +2925,8 @@ function monstera(x, z, s, rot) {
 function buildWorld() {
   const X0 = -7.2, X1 = 16.5;
   /* ---------- 공통: 바닥 · 천장 · 경계 ---------- */
-  wbox(X0, X1, -.1, 0, -3.4, 2.4, MAT.floor, { uv: 1, cast: false, tag: 'floor' });
+  col(X0, X1, -.1, 0, -3.4, 2.4, { tag: 'floor' });          // v2.9: 바닥 충돌은 한 장 그대로, 보이는 바닥만 방마다 나눈다 (거실 GLB가 거실 바닥만 바꾸도록)
+  for (const [a, b] of [[X0, 0], [0, 14], [14, X1]]) deco(a, b, -.1, 0, -3.4, 2.4, MAT.floor, { uv: 1, cast: false });
   deco(X0, 14.1, 2.6, 2.7, -3.4, .6, MAT.ceiling, { recv: false });
   col(X0, X1, 0, 3, .4, .5, { opaque: false, tag: 'bound' });
   col(-5.4, 14, 0, 3, -1.6, -.4, { opaque: false, tag: 'bound' });
@@ -3005,7 +3034,7 @@ function buildWorld() {
   backWall(9.6, 11.0, 0, .9, MAT.wallLounge); backWall(9.6, 11.0, 2.1, 2.6, MAT.wallLounge);
   backWall(11.0, 14, 0, 2.6, MAT.wallLounge);
   // 창문: 비 오는 유리 + 창살 + 벨벳 커튼(주름) + 주철 라디에이터 + 바깥 밤
-  const win = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.2), MAT.glass); win.position.set(10.3, 1.5, -1.66); scene.add(win);
+  const win = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.2), MAT.glass); win.position.set(10.3, 1.5, -1.66); win.userData.keep = true; scene.add(win);     // v2.9: 빗물 유리는 환경 GLB가 와도 그대로
   deco(9.55, 9.65, .88, 2.15, -1.7, -1.55, MAT.cream, { r: .01 }); deco(10.95, 11.05, .88, 2.15, -1.7, -1.55, MAT.cream, { r: .01 });
   deco(9.55, 11.05, 2.08, 2.15, -1.7, -1.55, MAT.cream, { r: .01 }); deco(9.48, 11.12, .87, .93, -1.7, -1.43, MAT.cream, { r: .012 });
   deco(10.28, 10.32, .92, 2.1, -1.68, -1.64, MAT.cream); deco(9.6, 11.0, 1.49, 1.53, -1.68, -1.64, MAT.cream);
@@ -3184,7 +3213,9 @@ function buildWorld() {
   W.fx.moonShaft = shaft(V3(10.3, 1.9, -1.62), V3(10.45, 0, .1), 1.1, 1.6, 0x7f9fd8, .07);
   const rim = new THREE.DirectionalLight(0x5c6fa8, .28); rim.position.set(0, 1.1, -6); scene.add(rim);
   W.lights.bounce = new THREE.PointLight(0xd08850, 3, 3.6, 2); W.lights.bounce.position.set(4.7, .3, 1.1); scene.add(W.lights.bounce);
-  W.lights.hemi = new THREE.HemisphereLight(0x46548a, 0x2a1c12, .56); scene.add(W.lights.hemi);   // v2.5: 어둠 속 실루엣이 읽히도록 (차가운 위 · 따뜻한 아래)
+  W.lights.hemi = new THREE.HemisphereLight(0x46548a, 0x2a1c12, .56); scene.add(W.lights.hemi);
+  // v2.9: 플레이어 뒤의 약한 림 라이트 (차가운 색 · 반경 55 cm) — 어두운 곳에서도 실루엣 윤곽이 남는다 (위치는 매 프레임 플레이어 뒤로)
+  W.lights.rimP = new THREE.PointLight(0xa8c0ff, .9, .55, 2); W.lights.rimP.position.set(0, .3, -.3); scene.add(W.lights.rimP);   // v2.5: 어둠 속 실루엣이 읽히도록 (차가운 위 · 따뜻한 아래)
   W.lights.moonFill = new THREE.PointLight(0x6f86c0, 2.9, 6.5, 2); W.lights.moonFill.position.set(10.3, 1.5, -.9); scene.add(W.lights.moonFill);
 
   /* ---------- 먼지 입자 ---------- */
@@ -4516,7 +4547,7 @@ function drBulb(x, z, len, ph, o = {}) {                    // 천장에서 늘�
 /* v2.6 Visual Lock: 창밖 · 마당 너머도 실제 3D — 그림을 붙인 평면 대신
    안쪽을 보는 하늘 반원통(꼭짓점 색 그라데이션) · 3D 달 · 별 점 · 이웃집 지붕 실루엣(상자 + 삼각 지붕) · 불 켜진 창(작은 발광 상자) */
 function nightView(o) {
-  const R = mulberry(o.seed || 7), G = new THREE.Group(); G.position.set(o.x, 0, o.z); bAdd(G);
+  const R = mulberry(o.seed || 7), G = new THREE.Group(); G.position.set(o.x, 0, o.z); G.userData.keep = true; bAdd(G);      // v2.9: 창밖 풍경은 환경 GLB가 와도 그대로
   const r = o.r || 3.5, h = o.h || 6, y0 = o.y0 ?? -.5;
   const sg = new THREE.CylinderGeometry(r, r, h, 40, 10, true, Math.PI * .5 - (o.wrap || 0), Math.PI + (o.wrap || 0) * 2); sg.translate(0, y0 + h / 2, 0);
   const pa = sg.attributes.position, col = new Float32Array(pa.count * 3), top = new THREE.Color(0x04070f), hor = new THREE.Color(o.horizon || 0x16223a), c = new THREE.Color();
@@ -4558,7 +4589,7 @@ function updateDress(dt, t) {
   const cx = CAM.x, shk = CAM.shake || 0;
   for (const a of DR.anim) {
     if (Math.abs(a.x - cx) > 7) continue;
-    if (a.kind === 'fade') { const hid = Math.abs(P.pos.x - a.x) < a.w && RT.state === 'play'; a.m.opacity = damp(a.m.opacity, hid ? .22 : 1, 5, dt); a.m.depthWrite = a.m.opacity > .95; continue; }
+    if (a.kind === 'fade') { const hid = (Math.abs(P.pos.x - a.x) < a.w && RT.state === 'play') || (RT.cine && Math.abs(CAM.x - a.x) < a.w + 1.4); /* v2.9: 등장 연출 숏도 가리지 않게 */ a.m.opacity = damp(a.m.opacity, hid ? .22 : 1, 5, dt); a.m.depthWrite = a.m.opacity > .95; continue; }
     if (a.kind === 'bulb') {
       const amp = a.amp + shk * 1.5;
       a.g.rotation.z = amp * Math.sin(t * .95 + a.ph) + amp * .3 * Math.sin(t * 2.3 + a.ph * 2); a.g.rotation.x = amp * .45 * Math.sin(t * .7 + a.ph);
@@ -4597,7 +4628,7 @@ function drShelf(x0, x1, y, o = {}) {                          // 벽 선반 + �
 }
 function drCable(pts, r = .006) { return tube(pts.map(p => V3(p[0], p[1], p[2])), r, MAT.cable || MAT.black, 60); }
 function fgFadeMat(x, w) {                                    // 전경 실루엣 재질 — 주인공이 그 뒤를 지나면 옅어진다
-  const m = MAT.fgDark.clone(); m.transparent = true; DR.anim.push({ stage: BUILD.stage,  kind: 'fade', x, w, m }); return m;
+  const m = MAT.fgDark.clone(); m.transparent = true; m.userData.fg = true; DR.anim.push({ stage: BUILD.stage,  kind: 'fade', x, w, m }); return m;
 }
 function drFg(kind, x, z, s = 1) {                             // 전경 실루엣 (피사계 심도로 흐려진다)
   const m = fgFadeMat(x, .45 * s + .2);
@@ -4701,11 +4732,12 @@ const CHARACTER_ASSETS = {
   aa:     { model: 'assets/characters/aa/chr_aa.glb',            fallback: createPlaceholderAA,     placeholder: 'PlaceholderAA3D',     height: .28, kind: 'hero' },
   locke:  { model: 'assets/characters/locke/chr_locke.glb',      fallback: createPlaceholderLocke,  placeholder: 'PlaceholderLocke3D',  height: .30, kind: 'hero' },
   rex:    { model: 'assets/characters/rex/chr_rex.glb',          fallback: createPlaceholderRex,    placeholder: 'PlaceholderRex3D',    height: .35, kind: 'hero' },
-  buddy:  { model: 'assets/characters/buddy/npc_buddy.glb',      fallback: createPlaceholderBuddy,  placeholder: 'PlaceholderBuddy3D',  height: .33, kind: 'npc' },   // 어깨 높이
+  buddy:  { model: 'assets/characters/buddy/npc_buddy.glb',      fallback: createPlaceholderBuddy,  placeholder: 'PlaceholderBuddy3D',  height: .33, kind: 'npc', measure: 'shoulder' },   // 어깨 높이
   mrOdd:  { model: 'assets/characters/mr-odd/boss_mr_odd.glb',   fallback: createPlaceholderMrOdd,  placeholder: 'PlaceholderMrOdd3D',  height: 1.8, kind: 'npc' },
   bully:  { model: 'assets/characters/bully/enemy_bully.glb',    fallback: createPlaceholderBully,  placeholder: 'PlaceholderBully3D',  height: 1.5, kind: 'npc' }
 };
-const ASSET_STATE = {};       // 'chr:vin' / 'env:djBooth' → placeholder | graybox | checking | glb | error: …
+const ASSET_STATE = {};       // 'chr:vin' / 'env:djBooth' → placeholder | graybox | checking | glb | rejected: … | error: …
+const ASSET_MEASURE = {};     // v2.9: 불러온 GLB의 실측 키 (비율 검사 · ?visualtest=1)
 const MODEL_ANIM = [];
 const HIDE_LAYER = 31;        // 바꿔 낀 placeholder 메시는 이 레이어로 (카메라 · 그림자 모두 안 그린다)
 
@@ -4782,7 +4814,9 @@ async function assetExists(path) {
   if (location.protocol === 'file:') return false;          // 더블클릭으로 연 파일에서는 브라우저가 막는다
   const idx = await assetIndex();
   if (idx) { const p = decodeURIComponent(new URL(ASSET_ROOT + path, location.href).pathname); return idx.files.has(p.startsWith(idx.base) ? p.slice(idx.base.length) : p.replace(/^\//, '')); }
-  try { const r = await fetch(ASSET_ROOT + path, { method: 'HEAD', cache: 'no-cache' }); return r.ok && !/text\/html/.test(r.headers.get('content-type') || ''); } catch (e) { return false; }
+  const u = ASSET_ROOT + path, ok = r => (r.ok || r.status === 206) && !/text\/html/.test(r.headers.get('content-type') || '');
+  try { const r = await fetch(u, { method: 'HEAD', cache: 'no-cache' }); if (ok(r)) return true; if (r.status !== 405 && r.status !== 501 && r.status !== 403) return false; } catch (e) { }
+  try { const r = await fetch(u, { headers: { Range: 'bytes=0-11' }, cache: 'no-cache' }); return ok(r); } catch (e) { return false; }      // v2.9: HEAD를 받지 않는 서버(게시 뷰어 등)는 앞 12바이트만
 }
 async function loadGLB(path) { return (await gltfLoader()).loadAsync(ASSET_ROOT + path); }
 function prepModel(model, key) {
@@ -4795,13 +4829,48 @@ function prepModel(model, key) {
 }
 function hidePlaceholder(root) { root.traverse(m => { if ((m.isMesh || m.isInstancedMesh || m.isPoints || m.isLine) && !m.userData.glb) m.layers.set(HIDE_LAYER); }); }
 function charTarget(id) { const A = CHARACTER_ASSETS[id]; if (A.kind === 'hero') { const V = HEROES[id]; return { obj: V, root: V.root, host: V.yaw }; } const N = id === 'buddy' ? BUDDY : id === 'mrOdd' ? ODD : BULLY; return { obj: N, root: N.root, host: N.yawG }; }
-/* loadCharacter: GLB 확인 → 있으면 VisualModel 안의 placeholder를 숨기고 GLB를 꽂는다 → 없으면 placeholder 유지 */
+/* v2.9 리그 연결 GLB — 노드 extras.link = '<리그 이름>'이면 게임 리그의 그 객체 밑으로 옮겨 붙인다(로컬 = 원점).
+   GLB는 리그의 묶음 자세(bind pose) 그대로 만들어졌으므로, 리그(절차 애니메이션: 발 고정 · 매달리기 손 · IK)가 움직이면
+   GLB 메시와 뼈(스킨)가 그대로 따라간다 → 이동 · 점프 · 충돌 · 퍼즐 코드는 그대로, 겉모습만 GLB.
+   GLB 안의 애니메이션 클립은 다른 프로그램 · ?visualtest=1 확인용 (게임에서는 같은 동작을 리그가 실시간으로 만든다). */
+function rigMeta(model) { let m = null; model.traverse(o => { if (!m && o.userData && o.userData.oddRig) m = o.userData; }); return m || {}; }
+function linkRigModel(model, root, obj) {
+  const idx = {}; root.traverse(o => { if (o.userData.rig && !o.userData.glb) idx[o.userData.rig] = o; });
+  const pairs = [], swaps = [];
+  model.traverse(o => { const l = o.userData.link; if (l && idx[l]) pairs.push([o, idx[l]]); if (o.isMesh && o.userData.swapMat) swaps.push(o); if (o.isSkinnedMesh) o.frustumCulled = false; });
+  if (!pairs.length) return 0;
+  for (const [o, t] of pairs) { t.add(o); o.position.set(0, 0, 0); o.quaternion.identity(); o.scale.set(1, 1, 1); }
+  for (const o of swaps) { const mt = obj.m && obj.m[o.userData.swapMat]; if (mt) o.material = mt; }
+  root.add(model);          // 남은 것(스킨 메시 — 뼈를 따라 그려진다)도 모델 루트 아래로
+  return pairs.length;
+}
+/* 비율 검사: 파일 그대로의 자세에서 잰 키(어깨 높이)가 등록값과 15% 넘게 다르면 쓰지 않는다 (PLACEHOLDER 유지) */
+function measureModel(model, A) {
+  model.updateMatrixWorld(true);
+  { const want = A.measure || 'height'; let mk = null; model.traverse(o => { if (!mk && o.userData.marker === want) mk = o; }); if (mk) return mk.getWorldPosition(V3()).y; }     // 표식(어깨 · 키)이 있으면 그것으로 (등에 멘 기타 같은 소품은 키에 넣지 않는다)
+  const b = new THREE.Box3(); model.traverse(o => { if ((o.isMesh || o.isSkinnedMesh) && o.geometry) { if (!o.geometry.boundingBox) o.geometry.computeBoundingBox(); b.union(o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld)); } });
+  const h = b.isEmpty() ? 0 : b.max.y - Math.min(0, b.min.y);
+  return A.measure === 'shoulder' ? h * .8 : h;       // 어깨 표식이 없는 네발 동물: 머리가 어깨 위로 약 20% — 전체 높이 × 0.8을 어깨로 본다
+}
+/* loadCharacter: GLB 확인 → 비율 검사 → 리그 연결(또는 일반 GLB: 겉모습 슬롯에 꽂고 클립 재생) → 없으면 placeholder 유지 */
 async function loadCharacter(id) {
   const A = CHARACTER_ASSETS[id], key = 'chr:' + id; ASSET_STATE[key] = 'checking';
   if (!(await assetExists(A.model))) { ASSET_STATE[key] = 'placeholder'; return 'placeholder'; }
   try {
     const g = await loadGLB(A.model), model = prepModel(g.scene || g.scenes[0], 'chr_' + id), T_ = charTarget(id);
-    hidePlaceholder(T_.root); T_.host.add(model); T_.obj.glb = model;
+    const h = measureModel(model, A), dev = Math.abs(h / A.height - 1);
+    ASSET_MEASURE[id] = { measured: +h.toFixed(3), target: A.height, dev: +dev.toFixed(3) };
+    if (!(dev <= .15)) { ASSET_STATE[key] = `rejected: ${(h * 100).toFixed(1)} cm (기준 ${(A.height * 100).toFixed(0)} cm)`; console.warn('[ODD HAUS] 비율이 맞지 않아 GLB를 쓰지 않음:', A.model, ASSET_STATE[key]); return 'placeholder'; }
+    const meta = rigMeta(model);
+    if (meta.oddRig) {
+      if (meta.oddRig === 'hero') hoseRig(T_.obj);
+      if (linkRigModel(model, T_.root, T_.obj)) {
+        hidePlaceholder(T_.root); applyRim(T_.root, A.kind === 'hero' ? RIM.hero : RIM.npc, true);
+        T_.obj.glb = model; T_.obj.glbLinked = true; T_.obj.glbClips = g.animations || []; T_.root.userData.placeholder = false;
+        ASSET_STATE[key] = 'glb'; return 'glb';
+      }
+    }
+    hidePlaceholder(T_.root); T_.host.add(model); T_.obj.glb = model; T_.obj.glbClips = g.animations || [];
     T_.root.userData.placeholder = false;
     if (g.animations && g.animations.length) { const mixer = new THREE.AnimationMixer(model), clips = {}; g.animations.forEach(c => { clips[CLIP_NORM(c.name)] = c; }); MODEL_ANIM.push({ id, A, who: T_.obj, mixer, clips, cur: null, act: null }); }
     ASSET_STATE[key] = 'glb'; return 'glb';
@@ -4824,7 +4893,9 @@ async function loadStageModel(id, group) {
   if (!(await assetExists(S.model))) { ASSET_STATE[key] = S.group ? 'graybox' : 'placeholder'; return; }
   try {
     const g = await loadGLB(S.model), model = prepModel(g.scene || g.scenes[0], 'env_' + id);
-    if (group) { hideGraybox(group); group.add(model); } else { hideEnvRange(S.x); scene.add(model); }
+    // v2.9: 게임이 밝기를 바꾸는 재질(램프 갓 · 잔불)은 게임 재질로 이어 붙인다 (extras.matRef = 'shade' · 'ember' · 'DR.shade')
+    model.traverse(o => { const r = o.isMesh && o.userData.matRef; if (!r) return; const [a, b] = r.split('.'); const mt = b ? (a === 'DR' ? DR[b] : null) : MAT[a]; if (mt) o.material = mt; });
+    if (group) { hideGraybox(group); group.add(model); } else { hideEnvRange(S.vis || S.x); (HOUSE.group || scene).add(model); }     // v2.9: 집 GLB는 집 그룹 안에 — 다른 스테이지에 있는 동안 함께 숨는다
     ASSET_STATE[key] = 'glb';
   } catch (e) { ASSET_STATE[key] = 'error: ' + ((e && e.message) || e); console.warn('[assets]', id, e); }
 }
@@ -4843,12 +4914,17 @@ function hideEnvRange(xr) {
   Object.values(W.dyn || {}).forEach(add); (W.pushables || []).forEach(p => { add(p.g); add(p.mesh); });
   (W.frags || []).forEach(f => add(f.g)); if (PLAYER.root) add(PLAYER.root); Object.values(HEROES).forEach(V => add(V.root));
   [ODD, BULLY, BUDDY].forEach(N => { if (N) { add(N.root); add(N.holder); add(N.box && N.box.G); } });
-  const box = new THREE.Box3(), c = V3();
+  const box = new THREE.Box3(), c = V3(), M4 = new THREE.Matrix4(), Z4 = new THREE.Matrix4().makeScale(0, 0, 0), ip = V3();
   scene.traverse(m => {
     if (!(m.isMesh || m.isInstancedMesh) || m.userData.glb || keep.has(m) || m.userData.stage || isKept(m)) return;
     const mt = Array.isArray(m.material) ? m.material[0] : m.material;
-    if (mt && mt.blending === THREE.AdditiveBlending) return;
-    box.setFromObject(m).getCenter(c);
+    if (mt && (mt.blending === THREE.AdditiveBlending || mt === MAT.fgDark || mt.userData.fg)) return;     // 빛 번짐 · 전경 실루엣(지나가면 옅어지는)은 그대로
+    if (m.isInstancedMesh) {        // v2.9: 집 전체에 걸친 인스턴스(책 · LP)는 범위 안의 것만 접는다
+      let n = 0; for (let i = 0; i < m.count; i++) { m.getMatrixAt(i, M4); ip.setFromMatrixPosition(M4); if (ip.x >= xr[0] && ip.x < xr[1]) { m.setMatrixAt(i, Z4); n++; } }
+      if (n) { m.instanceMatrix.needsUpdate = true; m.computeBoundingSphere && m.computeBoundingSphere(); } return;
+    }
+    box.setFromObject(m); box.getCenter(c);
+    if (box.min.x < xr[0] - .3 || box.max.x > xr[1] + .3) return;      // 범위 밖까지 걸친 것(천장 등)은 그대로
     if (c.x >= xr[0] && c.x < xr[1]) m.layers.set(HIDE_LAYER);
   });
 }
@@ -4907,7 +4983,7 @@ function updateModelAnims(dt) {
    ===================================================================== */
 const STAGES = {
   lounge: { no: '01', name: 'LOUNGE', side: 'SIDE A · 01', sub: 'The Quiet Room', ko: '조용한 방', x: [-99, 14.1], house: true,
-    model: 'assets/environment/lounge/env_lounge.glb', fallback: 'buildWorld', bgm: 'lounge', spawn: 'lounge', next: 'lp-library' },
+    model: 'assets/environment/lounge/env_lounge.glb', vis: [.07, 13.95], fallback: 'buildWorld', bgm: 'lounge', spawn: 'lounge', next: 'lp-library' },     // vis = GLB가 겉모습을 바꾸는 x 범위 (거실 방 안 — 현관 · 양쪽 칸막이 벽 · 문은 그대로)
   'lp-library': { no: '02', name: 'LP LIBRARY', side: 'SIDE A · 02', sub: 'The Stacks', ko: '레코드의 숲', x: [14.1, 50.6], house: true,
     model: 'assets/environment/lp-library/env_lp_library.glb', fallback: 'buildWorld', bgm: 'hall', spawn: 'library', next: 'studio' },
   studio: { no: '03', name: 'STUDIO', side: 'SIDE A · 03', sub: 'The Red Light', ko: '빨간 불의 방', x: [50.6, 100], house: true,
@@ -4966,6 +5042,21 @@ function sharedSets() {
   for (const k in T) { const v = T[k]; (Array.isArray(v) ? v : [v]).forEach(t => t && t.isTexture && texs.add(t)); }
   _shared.mats = mats; _shared.texs = texs; return _shared;
 }
+/* three r160: 그림자용 공용 재질(MeshDepth · MeshDistanceMaterial)은 map이 바뀌어도 셰이더를 다시 고르지 않아서,
+   유니폼에 남아 있던 예전 텍스처(내린 스테이지의 것)를 다음 그림자 렌더에서 다시 GPU에 올린다 → 그 GPU 텍스처는 영영 안 풀린다.
+   그림자 재질을 모아 두었다가 스테이지를 내릴 때 dispose 한 텍스처 참조를 지운다 */
+const SHADOW_MATS = new Set();
+THREE.Object3D.prototype.onBeforeShadow = function (r, o, c, sc, g, m) {
+  if (m && !SHADOW_MATS.has(m)) { SHADOW_MATS.add(m); m.addEventListener('dispose', () => SHADOW_MATS.delete(m)); }
+};
+function scrubShadowMats(dead) {
+  if (!dead.size) return;
+  for (const m of SHADOW_MATS) {
+    for (const k of ['map', 'alphaMap', 'displacementMap']) if (m[k] && dead.has(m[k])) m[k] = null;
+    const u = renderer.properties.get(m).uniforms; if (!u) continue;
+    for (const k in u) { const v = u[k] && u[k].value; if (v && v.isTexture && dead.has(v)) u[k].value = null; }
+  }
+}
 function disposeTree(G) {
   const S = sharedSets(), geos = new Set(), mats = new Set(), texs = new Set();
   G.traverse(o => {
@@ -4973,7 +5064,7 @@ function disposeTree(G) {
     const ms = o.material ? (Array.isArray(o.material) ? o.material : [o.material]) : [];
     for (const m of ms) { if (!m || S.mats.has(m)) continue; mats.add(m); for (const k in m) { const v = m[k]; if (v && v.isTexture && !S.texs.has(v)) texs.add(v); } }
   });
-  geos.forEach(g => g.dispose()); mats.forEach(m => m.dispose()); texs.forEach(t => t.dispose());
+  geos.forEach(g => g.dispose()); mats.forEach(m => m.dispose()); texs.forEach(t => t.dispose()); scrubShadowMats(texs);
   return { geos: geos.size, mats: mats.size, texs: texs.size };
 }
 function unloadStage(id) {
@@ -6103,11 +6194,12 @@ function oddHear(x, y, z, r) {
    빨간 플라잉V("BULLY" 스티커).
    리듬 스텔스: 연주 6.2초(눈 감음, 청각 ×0.75) ↔ 청취 3.8초(청각 ×4.2). 시야 1.6 m · 반각 34°.
    두 번 들으면 일어나서 찾는다. 추격: 러버밴드 속도, 장애물에서 미끄러지고 · 넘고 · 걷어찬다.
+   v2.9: 작은 마스코트가 아니라 실제 인간 소년 비율 — 다리 길이 = 키의 약 49%, 머리 = 키의 약 1/5.8 (살짝 큰 머리), 어깨 높이 1.17 m.
    v2.8: 등장은 두 번뿐 — ① 도서관 잠입(의자에서 연주 · 듣기 · 찾기) ② 걸쇠 소리 → "야!" → 그 자리에서 바로 추격(복도 끝 스튜디오 문까지).
    스튜디오 펫도어를 지나면 문을 한 번 쾅 치고 투덜대며 돌아가 다시는 나오지 않는다 (복도 매복 · 문 아래 손 · 스튜디오 난입은 없앴다).
    ===================================================================== */
 let BULLY = null;
-const B_PY = .63, B_PLAY = 6.2, B_LISTEN = 3.8, B_RANGE = 1.6, B_HALF = 34 * Math.PI / 180, B_REACT = .35, B_BEAT = 6.2 / 16;
+const B_PY = .77, B_PLAY = 6.2, B_LISTEN = 3.8, B_RANGE = 1.6, B_HALF = 34 * Math.PI / 180, B_REACT = .35, B_BEAT = 6.2 / 16;
 
 function buildBully() {
   const B = { root: new THREE.Group(), meshes: [] };
@@ -6116,22 +6208,22 @@ function buildBully() {
   const add = (parent, geo, mat, x = 0, y = 0, z = 0, sx = 1, sy = 1, sz = 1) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.scale.set(sx, sy, sz); parent.add(m); return m; };
   const yawG = B.yawG = new THREE.Group(); B.root.add(yawG);
   const pelvis = B.pelvis = new THREE.Group(); pelvis.position.y = B_PY; yawG.add(pelvis);
-  // v2.8: 캐릭터 시트(12번) 기준 — 큰 머리 · 통통한 아이 체형 · 검은 티 · 검은 청바지 · 빨간 하이탑
+  // v2.9: 인간 소년 비율(키 150 cm) — 긴 다리 · 보통 머리 · 검은 그래픽 티 · 어두운 청바지 · 빨간 하이탑
   const jeans = MAT.jeans || (MAT.jeans = new THREE.MeshPhysicalMaterial({ color: 0x1e2028, roughness: .85, sheen: .5, sheenColor: new THREE.Color(0x50586a), normalMap: T.noiseN, normalScale: new THREE.Vector2(.45, .45), envMap: T.env, envMapIntensity: .12 }));
   const redShoe = MAT.redSneaker || (MAT.redSneaker = new THREE.MeshPhysicalMaterial({ color: 0xb8231d, roughness: .7, sheen: .4, sheenColor: new THREE.Color(0xff8a70), normalMap: T.noiseN, normalScale: new THREE.Vector2(.25, .25), envMap: T.env, envMapIntensity: .25 }));
-  add(pelvis, new RoundedBoxGeometry(.32, .17, .22, 3, .07), jeans, 0, .0, 0);
-  add(pelvis, new THREE.TorusGeometry(.142, .014, 6, 28), MAT.black, 0, .07, 0, 1, 1, .74).rotation.x = Math.PI / 2;      // 벨트
-  add(pelvis, new RoundedBoxGeometry(.04, .03, .01, 1, .004), MAT.chrome, 0, .07, .108);
+  add(pelvis, new RoundedBoxGeometry(.28, .17, .19, 3, .07), jeans, 0, .0, 0);
+  add(pelvis, new THREE.TorusGeometry(.128, .013, 6, 28), MAT.black, 0, .07, 0, 1, 1, .72).rotation.x = Math.PI / 2;      // 벨트
+  add(pelvis, new RoundedBoxGeometry(.04, .03, .01, 1, .004), MAT.chrome, 0, .07, .094);
   // 다리: 통 넓은 검은 청바지 (밑단 접힘) · 빨간 하이탑
   B.legs = [];
   for (const s of [-1, 1]) {
-    const hip = new THREE.Group(); hip.position.set(s * .085, -.03, 0); pelvis.add(hip);
-    add(hip, new THREE.CylinderGeometry(.085, .074, .32, 18), jeans, 0, -.14);
-    const knee = new THREE.Group(); knee.position.y = -.285; hip.add(knee);
-    add(knee, SPH, jeans, 0, 0, .005, .075, .075, .075);
-    add(knee, new THREE.CylinderGeometry(.073, .07, .23, 18), jeans, 0, -.11);
-    add(knee, new THREE.CylinderGeometry(.077, .077, .045, 18), jeans, 0, -.225);       // 접은 밑단
-    const foot = new THREE.Group(); foot.position.y = -.285; knee.add(foot);
+    const hip = new THREE.Group(); hip.position.set(s * .078, -.03, 0); pelvis.add(hip);
+    add(hip, new THREE.CylinderGeometry(.082, .07, .36, 18), jeans, 0, -.16);
+    const knee = new THREE.Group(); knee.position.y = -.32; hip.add(knee);
+    add(knee, SPH, jeans, 0, 0, .005, .07, .07, .07);
+    add(knee, new THREE.CylinderGeometry(.068, .066, .3, 18), jeans, 0, -.15);
+    add(knee, new THREE.CylinderGeometry(.072, .072, .04, 18), jeans, 0, -.3);       // 접은 밑단
+    const foot = new THREE.Group(); foot.position.y = -.35; knee.add(foot);
     add(foot, new RoundedBoxGeometry(.118, .09, .24, 3, .04), redShoe, 0, -.012, .05);
     add(foot, new THREE.CylinderGeometry(.06, .064, .06, 16), redShoe, 0, .03, .0);
     add(foot, new RoundedBoxGeometry(.126, .028, .255, 2, .012), MAT.sole, 0, -.052, .05);
@@ -6141,71 +6233,72 @@ function buildBully() {
   }
   // 몸통: 검은 티셔츠 (선반 프로파일 — 아이처럼 둥근 배, 프린트가 앞을 보도록 회전)
   const spine = B.spine = new THREE.Group(); spine.position.y = .06; pelvis.add(spine);
-  const tp = [[.155, -.06], [.165, 0], [.172, .1], [.176, .2], [.172, .28], [.15, .34], [.1, .375], [.05, .385]].map(([r, y]) => new THREE.Vector2(r, y));
+  const tp = [[.138, -.06], [.142, 0], [.144, .1], [.15, .2], [.155, .29], [.138, .35], [.086, .39], [.046, .4]].map(([r, y]) => new THREE.Vector2(r, y));
   const tg = new THREE.LatheGeometry(tp, 30); tg.rotateY(-Math.PI / 2);
-  B.torso = add(spine, tg, MAT.tee, 0, 0, 0, 1, 1, .76);
-  add(spine, new THREE.TorusGeometry(.066, .014, 8, 20), MAT.teeDark, 0, .38, 0).rotation.x = Math.PI / 2;    // 목둘레
-  add(spine, new THREE.CylinderGeometry(.05, .056, .06, 14), MAT.kidSkin, 0, .4);
+  B.torso = add(spine, tg, MAT.tee, 0, 0, 0, 1, 1, .7);
+  add(spine, new THREE.TorusGeometry(.06, .013, 8, 20), MAT.teeDark, 0, .395, 0).rotation.x = Math.PI / 2;    // 목둘레
+  add(spine, new THREE.CylinderGeometry(.045, .05, .08, 14), MAT.kidSkin, 0, .43);
   // 기타 끈 (가슴을 가로지른다)
-  const strap = add(spine, new THREE.TorusGeometry(.205, .013, 6, 30, Math.PI * 1.1), MAT.black, 0, .18, 0, 1, 1, .8); strap.rotation.set(0, 0, 2.3);
-  // 머리: 시트처럼 큰 머리 (키의 약 1/4)
-  const head = B.head = new THREE.Group(); head.position.y = .4; head.scale.setScalar(1.42); spine.add(head);
-  add(head, SPH, MAT.kidFace, 0, .13, 0, .128, .135, .125);
-  add(head, SPH, MAT.kidSkin, 0, .07, .028, .108, .072, .098);         // 통통한 볼 · 턱
-  for (const s of [-1, 1]) add(head, SPH, MAT.kidSkin, s * .127, .12, -.005, .022, .036, .018);   // 귀
-  add(head, SPH, MAT.kidSkin, 0, .108, .13, .022, .019, .021);             // 코
+  const strap = add(spine, new THREE.TorusGeometry(.18, .012, 6, 30, Math.PI * 1.1), MAT.black, 0, .2, 0, 1, 1, .72); strap.rotation.set(0, 0, 2.3);
+  // 머리: 살짝 큰 소년 머리 (키의 약 1/5.8 — 마스코트처럼 크지 않게)
+  const head = B.head = new THREE.Group(); head.position.y = .42; head.scale.setScalar(.92); spine.add(head);
+  add(head, SPH, MAT.kidFace, 0, .135, 0, .104, .13, .114);
+  add(head, SPH, MAT.kidSkin, 0, .07, .03, .086, .07, .088);         // 볼 · 턱
+  for (const s of [-1, 1]) add(head, SPH, MAT.kidSkin, s * .104, .12, -.005, .02, .034, .016);   // 귀
+  add(head, SPH, MAT.kidSkin, 0, .108, .118, .02, .022, .022);             // 코
   { const fr = new THREE.MeshStandardMaterial({ color: 0xa8603a, roughness: .8 }), RF = mulberry(77);      // 주근깨
-    for (const s of [-1, 1]) for (let i = 0; i < 7; i++) add(head, new THREE.SphereGeometry(.0028, 6, 4), fr, s * (.045 + RF() * .04), .1 + RF() * .025, .114 - RF() * .015, 1, 1, .4); }
+    for (const s of [-1, 1]) for (let i = 0; i < 7; i++) add(head, new THREE.SphereGeometry(.0028, 6, 4), fr, s * (.038 + RF() * .032), .1 + RF() * .025, .104 - RF() * .015, 1, 1, .4); }
   // 눈 (파란 홍채 · 캐치라이트), 눈꺼풀은 연주할 때 감는다
   B.eyes = [];
   for (const s of [-1, 1]) {
-    const e = new THREE.Group(); e.position.set(s * .047, .142, .108); head.add(e);
-    add(e, SPH, MAT.white || MAT.teeth, 0, 0, 0, .027, .031, .016);
+    const e = new THREE.Group(); e.position.set(s * .04, .142, .1); head.add(e);
+    add(e, SPH, MAT.white || MAT.teeth, 0, 0, 0, .022, .026, .014);
     const ir = add(e, SPH, MAT.iris, -s * .002, -.003, .012, .014, .016, .007);
     add(e, SPH, MAT.black, -s * .002, -.003, .016, .007, .008, .004);
     add(e, new THREE.SphereGeometry(.0035, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffffff }), -s * .006, .004, .018);
     B.eyes.push(e);
-    const br = add(head, CAP(.008, .04), MAT.brow, s * .05, .185, .118); br.rotation.z = s * (Math.PI / 2 - .35);
+    const br = add(head, CAP(.007, .036), MAT.brow, s * .042, .182, .108); br.rotation.z = s * (Math.PI / 2 + .22);
     (B.brows = B.brows || []).push(br);
   }
   // 이를 드러낸 웃음 (입 · 위 이빨 · 혀)
-  const mouth = B.mouth = new THREE.Group(); mouth.position.set(0, .07, .124); head.add(mouth);
+  const mouth = B.mouth = new THREE.Group(); mouth.position.set(0, .068, .112); head.add(mouth);
   // v2.6 Visual Lock: 섬뜩한 이빨 웃음 대신 한쪽 입꼬리가 올라간 얄미운 웃음 (윗니 조금)
-  const mo = add(mouth, new THREE.CircleGeometry(.05, 24, Math.PI, Math.PI), MAT.mouth, .008, .006, .008, .95, .6, 1); mo.rotation.z = .16;
-  const tth = add(mouth, new THREE.BoxGeometry(.062, .011, .008), MAT.teeth, .01, .001, .011); tth.rotation.z = .16;
-  const cnr = add(mouth, CAP(.0045, .012), MAT.mouth, .056, .012, .012); cnr.rotation.z = 1.0;
-  B.tongue = add(mouth, CAP(.014, .02), new THREE.MeshStandardMaterial({ color: 0xd8606a, roughness: .45 }), 0, -.028, .01); B.tongue.rotation.x = Math.PI / 2; B.tongue.visible = false;
+  const mo = add(mouth, new THREE.CircleGeometry(.04, 24, Math.PI, Math.PI), MAT.mouth, .006, .006, .008, .95, .6, 1); mo.rotation.z = .16;
+  const tth = add(mouth, new THREE.BoxGeometry(.05, .01, .008), MAT.teeth, .008, .001, .011); tth.rotation.z = .16;
+  const cnr = add(mouth, CAP(.0042, .011), MAT.mouth, .045, .011, .012); cnr.rotation.z = 1.0;
+  { const tg = CAP(.012, .016).translate(0, .02, 0); tg.scale(1, 1, .45); B.tongue = add(mouth, tg, new THREE.MeshStandardMaterial({ color: 0xd8606a, roughness: .45 }), 0, -.014, -.02); }     // v2.9: 혀는 입 안에서 앞으로 밀려 나온다 (+Y = 앞)
+  B.tongue.rotation.x = Math.PI / 2; B.tongue.visible = false;
   // 금발 곱슬 (캡 아래로 옆 · 뒤 · 앞머리가 삐져나온다) + 뒤로 쓴 버건디 캡
   const HR = mulberry(55);
-  add(head, SPH, MAT.blond, 0, .16, -.015, .134, .12, .13);
+  add(head, SPH, MAT.blond, 0, .16, -.015, .11, .118, .122);
   for (let i = 0; i < 46; i++) {
     const th = HR() * TAU, ph = 1.05 + HR() * .8, dx = Math.sin(ph) * Math.cos(th), dy = Math.cos(ph), dz = Math.sin(ph) * Math.sin(th);
     if (dz > .3) continue;
-    const r = .026 + HR() * .016, m = add(head, SPH, MAT.blond, dx * .132, .15 + dy * .125, dz * .13 - .012, r * 1.15, r * .8, r);
+    const r = .024 + HR() * .015, m = add(head, SPH, MAT.blond, dx * .108, .15 + dy * .122, dz * .122 - .012, r * 1.15, r * .8, r);
     m.quaternion.setFromUnitVectors(V3(0, 1, 0), V3(dx, dy * .5 + .2, dz).normalize());
   }
-  for (let i = 0; i < 9; i++) { const a = (i - 4) * .16, m = add(head, SPH, MAT.blond, Math.sin(a) * .1, .2 + Math.cos(i * 1.7) * .012, .095 - Math.abs(i - 4) * .006, .028, .02, .034); m.rotation.set(.5, a * .5, (i - 4) * -.2); }     // 앞머리 (스냅백 구멍 아래)
+  for (let i = 0; i < 9; i++) { const a = (i - 4) * .16, m = add(head, SPH, MAT.blond, Math.sin(a) * .085, .2 + Math.cos(i * 1.7) * .012, .088 - Math.abs(i - 4) * .006, .024, .018, .03); m.rotation.set(.5, a * .5, (i - 4) * -.2); }     // 앞머리 (스냅백 구멍 아래)
   mergeByMaterial(head, head.children.filter(o => o.isMesh && (o.material === MAT.blond || o.material.color && o.material.color.getHex() === 0xa8603a)).map(o => o.material).filter((v, i, a) => a.indexOf(v) === i));
   const capG = B.cap = new THREE.Group(); capG.position.set(0, .19, -.012); capG.rotation.x = -.22; head.add(capG);
-  add(capG, new THREE.SphereGeometry(.14, 24, 12, 0, TAU, 0, Math.PI / 2.25), MAT.cap, 0, -.01, 0, 1, .74, 1.03);
-  const brim = add(capG, new RoundedBoxGeometry(.15, .012, .11, 2, .005), MAT.capBrim, 0, -.005, -.165); brim.rotation.x = .1;
-  const logo = add(capG, new THREE.CircleGeometry(.026, 16), MAT.capLogo, 0, .045, -.118); logo.rotation.set(-.35, Math.PI, 0);
+  add(capG, new THREE.SphereGeometry(.14, 24, 12, 0, TAU, 0, Math.PI / 2.25), MAT.cap, 0, -.01, 0, .84, .74, .93);
+  const brim = add(capG, new RoundedBoxGeometry(.14, .012, .1, 2, .005), MAT.capBrim, 0, -.005, -.15); brim.rotation.x = .1;
+  const logo = add(capG, new THREE.CircleGeometry(.024, 16), MAT.capLogo, 0, .045, -.106); logo.rotation.set(-.35, Math.PI, 0);
   add(capG, new THREE.SphereGeometry(.011, 8, 6), MAT.cap, 0, .085, 0);
-  add(capG, new THREE.TorusGeometry(.03, .006, 6, 12, Math.PI), MAT.cap, 0, .0, .128).rotation.x = -.2;   // 스냅백 구멍
+  add(capG, new THREE.TorusGeometry(.028, .006, 6, 12, Math.PI), MAT.cap, 0, .0, .118).rotation.x = -.2;   // 스냅백 구멍
   // 팔: 넉넉한 반팔 · 통통한 팔 · 빨간 손목 밴드 · 큰 손 (오른손 = −X)
   B.arms = [];
   for (const s of [-1, 1]) {
-    const sho = new THREE.Group(); sho.position.set(s * .17, .31, 0); spine.add(sho);
-    add(sho, SPH, MAT.teeDark, 0, -.02, 0, .072, .074, .07);
-    add(sho, new THREE.CylinderGeometry(.072, .068, .12, 16), MAT.teeDark, 0, -.07);
-    add(sho, CAP(.046, .14), MAT.kidSkin, 0, -.15);
-    const elb = new THREE.Group(); elb.position.y = -.25; sho.add(elb);
-    add(elb, CAP(.042, .14), MAT.kidSkin, 0, -.1);
-    add(elb, new THREE.CylinderGeometry(.048, .048, .045, 14), MAT.band, 0, -.19);
+    const sho = new THREE.Group(); sho.position.set(s * .148, .345, 0); spine.add(sho);
+    add(sho, SPH, MAT.teeDark, 0, -.02, 0, .058, .062, .058);
+    add(sho, new THREE.CylinderGeometry(.057, .053, .13, 16), MAT.teeDark, 0, -.075);
+    add(sho, CAP(.04, .17), MAT.kidSkin, 0, -.15);
+    const elb = new THREE.Group(); elb.position.y = -.27; sho.add(elb);
+    add(elb, CAP(.036, .15), MAT.kidSkin, 0, -.1);
+    add(elb, new THREE.CylinderGeometry(.042, .042, .04, 14), MAT.band, 0, -.19);
     const hand = new THREE.Group(); hand.position.y = -.235; elb.add(hand);
-    add(hand, SPH, MAT.kidSkin, 0, -.03, 0, .046, .056, .03);
-    add(hand, CAP(.02, .045), MAT.kidSkin, 0, -.08, .006);
-    add(hand, CAP(.015, .028), MAT.kidSkin, s * -.042, -.032, .014).rotation.z = s * .7;
+    add(hand, SPH, MAT.kidSkin, 0, -.03, 0, .04, .05, .026);
+    add(hand, CAP(.018, .04), MAT.kidSkin, 0, -.075, .006);
+    add(hand, CAP(.013, .026), MAT.kidSkin, s * -.036, -.03, .012).rotation.z = s * .7;
     B.arms.push({ sho, elb, hand, s });
   }
   // 빨간 플라잉V (히어로 소품): 넥 = 로컬 +X, 앞면 = +Z
@@ -6228,6 +6321,9 @@ function buildBully() {
   B.strum = V3(-.07, 0, .04);     // 기타 로컬: 줄 치는 곳
   B.fret = V3(.5, 0, .03);        // 왼손이 잡는 넥
   B.root.name = 'PlaceholderBully3D';
+  tagRig({ root: B.root, yaw: yawG, pelvis, spine, head, cap: capG, mouth, tongue: B.tongue, guitar: gt, eye0: B.eyes[0], eye1: B.eyes[1], brow0: B.brows[0], brow1: B.brows[1] });
+  B.legs.forEach((L, i) => tagRig({ ['hip' + i]: L.hip, ['knee' + i]: L.knee, ['foot' + i]: L.foot }));
+  B.arms.forEach((A, i) => tagRig({ ['sho' + i]: A.sho, ['elb' + i]: A.elb, ['hand' + i]: A.hand }));
   B.root.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; B.meshes.push(o); } });
   B.xrayMat = new THREE.MeshBasicMaterial({ color: 0x7fd6c8, transparent: true, opacity: 0, depthTest: false, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
   B.xrayMeshes = []; for (const m of B.meshes) { const x = new THREE.Mesh(m.geometry, B.xrayMat); x.renderOrder = 30; x.visible = false; m.add(x); B.xrayMeshes.push(x); }      // v2.8: 공명 때만 켠다 (꺼져 있을 땐 그리지 않는다)
@@ -6247,7 +6343,7 @@ function buildBully() {
 
 /* ---------- 두 관절 IK: 척추 공간의 목표로 어깨 · 팔꿈치를 돌린다 ---------- */
 const _ik = { S: V3(), T: V3(), E: V3(), d: V3(), pole: V3(), a: V3(), q: new THREE.Quaternion(), qi: new THREE.Quaternion(), down: V3(0, -1, 0) };
-function armIK(arm, target, pole, la = .25, lb = .235) {
+function armIK(arm, target, pole, la = .27, lb = .235) {
   const S = _ik.S.copy(arm.sho.position), T = _ik.T.copy(target), d = _ik.d.subVectors(T, S);
   let L = d.length(); const maxL = la + lb - .002; if (L > maxL) { d.multiplyScalar(maxL / L); T.copy(S).add(d); L = maxL; } L = Math.max(L, .05);
   const cosA = clamp((la * la + L * L - lb * lb) / (2 * la * L), -1, 1), A = Math.acos(cosA);
@@ -6487,7 +6583,7 @@ function bullyAnimate(dt, t, alpha = 1) {
   for (const k in T_) p[k] = damp(p[k], T_[k], k === 'eyes' ? 14 : k === 'seat' ? 5 : 7, dt);
   const mv = B.moving > .05 ? Math.min(1.4, B.moving) : 0;
   p.walk = damp(p.walk, mv > 0 ? 1 : 0, 7, dt); p.run = damp(p.run, clamp((B.moving - .9) / .8, 0, 1), 5, dt);
-  if (B.moving > .05) B.ph += B.moving * dt / (.95 + p.run * .25) * TAU;
+  if (B.moving > .05) B.ph += B.moving * dt / (1.25 + p.run * .35) * TAU;     // v2.9: 긴 다리 → 보폭 0.62 m(걷기) · 0.8 m(달리기)
   const sn = Math.sin(B.ph), w = p.walk * (1 - p.seat), r = p.run;
   const side = sn > 0 ? 1 : 0;
   if (B.moving > .05 && side !== B.stepSide) { B.stepSide = side; bullyFootstep(); }
@@ -6495,21 +6591,21 @@ function bullyAnimate(dt, t, alpha = 1) {
   const beat = st === 'seated' && B.phase === 'play' ? (B.phaseT / B_BEAT) % 1 : 0;
   const bob = (Math.abs(Math.cos(B.ph)) * (.02 + r * .03) - .01) * w;
   const standY = B_PY + bob + p.climb * .3 * Math.sin(clamp((B.pos.x - 37.75) / 1.55, 0, 1) * Math.PI);
-  let py = lerp(standY, .7, p.seat); py = lerp(py, .32, p.kneel); py -= p.stumble * .12;
+  let py = lerp(standY, .7, p.seat); py = lerp(py, .42, p.kneel); py -= p.stumble * .12;
   B.pelvis.position.y = py; B.pelvis.position.z = lerp(0, .05, p.seat);
   B.pelvis.rotation.x = p.seat * -.05 + p.stumble * .2;
   B.pelvis.rotation.z = Math.sin(B.ph) * .04 * w;
   const tap = st === 'seated' && B.phase === 'play' ? Math.max(0, Math.sin(beat * TAU)) * .12 : 0;
   for (let i = 0; i < 2; i++) {
     const L = B.legs[i], s = i ? -1 : 1, ph = sn * s;
-    const walkHip = -ph * (.55 + r * .45) * w, walkKnee = Math.max(0, Math.sin(B.ph * (i ? 1 : -1) + .4)) * (.7 + r * .6) * w;
-    let hx = lerp(walkHip, -1.42 + (i === 0 ? tap * .3 : 0), p.seat), kx = lerp(walkKnee, 1.3 - (i === 0 ? tap : 0) + .12, p.seat);
+    const walkHip = -ph * (.43 + r * .14) * w, walkKnee = Math.max(0, Math.sin(B.ph * (i ? 1 : -1) + .4)) * (.62 + r * .7) * w;
+    let hx = lerp(walkHip, -1.42 + (i === 0 ? tap * .3 : 0), p.seat), kx = lerp(walkKnee, 1.3 - (i === 0 ? tap : 0) + .42, p.seat);    // v2.9: 긴 정강이 → 발은 스툴 발받침 쪽으로
     hx = lerp(hx, -.15, p.kneel); kx = lerp(kx, 1.75, p.kneel);
     if (p.kick > .01 && i === 0) { hx = lerp(hx, -1.3, p.kick); kx = lerp(kx, .15, p.kick); }
     if (p.climb > .01) { hx -= p.climb * .5 * (i ? Math.max(0, sn) : Math.max(0, -sn)); kx += p.climb * .6 * (i ? Math.max(0, sn) : Math.max(0, -sn)); }
     L.hip.rotation.x = hx; L.hip.rotation.z = s * (.04 + p.seat * .1 + p.kneel * .05);
     L.knee.rotation.x = kx;
-    L.foot.rotation.x = -(hx + kx) * (1 - p.kneel * .5) + Math.max(0, -Math.sin(B.ph * (i ? -1 : 1))) * .3 * w + p.kneel * .8;
+    L.foot.rotation.x = lerp(-(hx + kx) + Math.max(0, -Math.sin(B.ph * (i ? -1 : 1))) * .3 * w, 1.5, p.kneel);     // 무릎 꿇기: 발등이 바닥에
   }
   // 척추 · 머리
   const bang = st === 'seated' && B.phase === 'play' ? Math.pow(Math.max(0, Math.sin(beat * Math.PI)), 2) : 0;
@@ -6532,11 +6628,11 @@ function bullyAnimate(dt, t, alpha = 1) {
   // 얼굴: 눈꺼풀 · 눈썹 · 웃음 · 혀
   const eo = Math.max(.08, p.eyes) * (1 + p.alert * .15);
   for (const e of B.eyes) e.scale.set(1 + p.alert * .1, eo, 1);
-  B.brows.forEach((b, i) => { const s = i ? 1 : -1; b.position.y = .185 + p.alert * .012 + (1 - p.eyes) * -.004; b.rotation.z = s * (Math.PI / 2 - .35 + p.alert * .25); });
+  B.brows.forEach((b, i) => { const s = i ? 1 : -1; b.position.y = .182 + p.alert * .012 + (1 - p.eyes) * -.004; b.rotation.z = s * (Math.PI / 2 + .22 + p.alert * .18); });     // v2.9: 안쪽 끝이 내려간 심술 눈썹
   B.mouth.scale.set(1 + bang * .15, 1 + p.alert * .4 + bang * .5, 1);
-  B.tongue.visible = p.tongue > .5; B.tongue.scale.y = p.tongue;
+  B.tongue.visible = p.tongue > .05; B.tongue.position.z = -.02 + .03 * p.tongue; B.tongue.scale.y = .5 + .5 * p.tongue;
   // 기타: 무릎 위 ↔ 등에 멘 모습
-  const lapP = B._v.set(-.1, .01, .19), backP = V3(.02, .2, -.16);
+  const lapP = B._v.set(-.1, .01, .19), backP = V3(.02, .22, -.15);
   const qLap = B._q.setFromEuler(new THREE.Euler(-.15, .15, .42)), qBack = B._q2.setFromEuler(new THREE.Euler(0, Math.PI, 2.1));
   B.guitar.position.lerpVectors(lapP, backP, p.slung); B.guitar.quaternion.copy(qLap).slerp(qBack, p.slung);
   B.guitar.updateMatrixWorld(true); B.spine.updateMatrixWorld(true);
@@ -6545,15 +6641,15 @@ function bullyAnimate(dt, t, alpha = 1) {
   const fretW = B.fret.clone().setX(B.fret.x - (Math.floor(B.phaseT / (B_BEAT * 4)) % 2) * .12).applyMatrix4(B.guitar.matrixWorld).applyMatrix4(toSpine);
   // 팔: 목표점 (척추 공간) → IK
   const [Rr, Ll] = B.arms;
-  const swing = s => V3(s * .2, .05 + Math.max(0, Math.sin(B.ph * -s)) * .1 * r, Math.sin(B.ph * -s) * (.12 + r * .12)).multiplyScalar(1).add(V3(0, 0, .02));
+  const swing = s => V3(s * .2, -.11 + r * .14 + Math.max(0, Math.sin(B.ph * -s)) * .1 * r, Math.sin(B.ph * -s) * (.14 + r * .1)).add(V3(0, 0, .03));
   const strum = Math.sin(t * TAU * 2 / B_BEAT) * .045 * p.strum;
-  let tR = V3(-.2, .07 + r * .06, .02).lerp(swing(-1), w);
-  let tL = V3(.2, .07 + r * .06, .02).lerp(swing(1), w);
+  let tR = V3(-.2, -.11 + r * .14, .04).lerp(swing(-1), w);
+  let tL = V3(.2, -.11 + r * .14, .04).lerp(swing(1), w);
   const strumPt = strumW.clone(); strumPt.y += strum; strumPt.z += .03;
   tR.lerp(strumPt, (1 - p.slung) * (1 - p.ear));
   tL.lerp(fretW, (1 - p.slung));
-  if (p.ear > .01) tR.lerp(V3(-.15, .6, .02), p.ear);
-  if (p.point > .01) tR.lerp(V3(-.1, .4, .42), p.point);
+  if (p.ear > .01) tR.lerp(V3(-.13, .53, .02), p.ear);
+  if (p.point > .01) tR.lerp(V3(-.12, .42, .45), p.point);
   if (p.stumble > .01) { tR.lerp(V3(-.35, .5, .2), p.stumble); tL.lerp(V3(.35, .45, .25), p.stumble); }
   if (p.reach > .01) { const rt = B.reachT.clone(); B.spine.worldToLocal(rt); tR.lerp(rt, p.reach); }
   armIK(Rr, tR, V3(-.6, -.2, -.8)); armIK(Ll, tL, V3(.6, -.2, -.8));
@@ -6738,6 +6834,10 @@ function buildBuddy() {
   B.legs.forEach((L, i) => { tuft(L.hip, [0, -.04, 0], [.046, .062, .05], 60, t, 30 + i, { tint: CR, droop: 1.4 }); tuft(L.knee, [0, -.038, 0], [.036, .05, .038], 36, t, 40 + i, { tint: CR, droop: 1.5, len: .016 }); });
   B.tail.forEach((g, i) => tuft(g, [0, 0, -.022], [.034 - i * .003, .032 - i * .003, .05], 40, t, 50 + i, { tint: i >= 2 ? BR : CR, droop: 1.3, len: .022 }));
   B.root.traverse(o => { if (o.isMesh && !o.isInstancedMesh) { o.castShadow = true; } });
+  // v2.9: 리그 이름표 (GLB 노드 extras.link가 가리킨다)
+  tagRig({ root: B.root, yaw: B.yawG, body: B.body, neck: B.neck, head: B.head, jaw: B.jaw, tongue: B.tongue, eye0: B.eyes[0], eye1: B.eyes[1], ear0: B.ears[0], ear1: B.ears[1], tie: B.tie, tag: B.tagG });
+  B.legs.forEach((L, i) => tagRig({ ['hip' + i]: L.hip, ['knee' + i]: L.knee, ['paw' + i]: L.paw }));
+  B.tail.forEach((g, i) => tagRig({ ['tail' + i]: g }));
   for (const k in m) if (m[k] !== m.catch) m[k].transparent = true;     // 가릴 때 옅어지게 (셰이더 재컴파일 없이)
   B.root.scale.setScalar(.92);          // 어깨 높이 약 32 cm · 머리 끝 약 46 cm
   B.root.name = 'PlaceholderBuddy3D';
@@ -7135,8 +7235,9 @@ const GradeShader = {
       c *= mix(1. - vign, 1., v);
       float n = rnd(vUv * res + fract(time) * 91.7) - .5;
       // v2.6 Visual Lock 5: 완전한 검정 뭉개짐 금지 — 가장 어두운 곳도 푸른 숯색으로 남긴다
-      float lf = dot(c, vec3(.2126, .7152, .0722)); c += vec3(.026, .032, .052) * (1. - smoothstep(0., .12, lf));
+      // v2.9: 어두운 곳은 검정이 아니라 아주 어두운 푸른 회색 (#0f1219 정도) — 화면의 65~80%가 어두워도 형태가 남는다
       c += n * grain * (1. - l * .5);
+      float lf = dot(c, vec3(.2126, .7152, .0722)); c = max(c, 0.) + vec3(.046, .054, .078) * (1. - smoothstep(0., .34, lf));     // 그레인 뒤에 — 가장 어두운 점도 푸른 회색 위
       gl_FragColor = vec4(clamp(c, 0., 1.), 1.);
     }`
 };
@@ -7157,12 +7258,12 @@ function initPost() {
 }
 /* v2.6 Visual Lock 5: 캐릭터 림 라이트 — 어두운 방에서도 작은 실루엣이 읽히도록 가장자리만 살짝 밝힌다.
    광원을 늘리지 않고 셰이더에 프레넬 항만 더한다. 색은 방(조명 구역)마다 바뀐다 (applyZone). */
-const RIM = { hero: { color: { value: new THREE.Color(0x9fb4e8) }, k: { value: .55 } }, npc: { color: { value: new THREE.Color(0x9fb4e8) }, k: { value: .22 } } };
+const RIM = { hero: { color: { value: new THREE.Color(0x9fb4e8) }, k: { value: .62 } }, npc: { color: { value: new THREE.Color(0x9fb4e8) }, k: { value: .22 } } };
 const RIM_ZONE = { T: 0x8ea8dc, A: 0xa8b8e0, B: 0x9fb4e8, C: 0xffc890, D: 0xd8707a, K: 0x7a9aff, E: 0x9a7aff, F: 0xa8c0f0, G: 0x9fb4ff };
-function applyRim(root, U) {
+function applyRim(root, U, glb = false) {       // glb = true: GLB 메시에만 (리그에 연결된 뒤)
   const done = new Map();
   root.traverse(m => {
-    if (!m.isMesh || !m.material || Array.isArray(m.material) || !m.material.isMeshStandardMaterial || m.userData.glb) return;
+    if (!m.isMesh || !m.material || Array.isArray(m.material) || !m.material.isMeshStandardMaterial || !!m.userData.glb !== glb || m.userData.noRim) return;
     let c = done.get(m.material);
     if (!c) {
       c = m.material.clone();
@@ -7556,8 +7657,10 @@ function updateCamera(dt) {
   // v2.6 보스 연출: Mr. ODD가 아주 가까우면 다리 · 발 · 손만 화면에 (얼굴은 들킬 때만), 조금 떨어지면 몸 실루엣
   if (ODD && ODD.root.visible && ODD.pos.x > 0) { const od = Math.abs(ODD.pos.x - vp.x); if (od < 6.5) fr = od < 2.2 && ODD.meter < .5 ? 1.95 : 2.6; }
   const bchase = false;      // v2.6: Buddy는 쫓지 않는다 (길잡이)
-  const chase = (BULLY && ['chase', 'rise'].includes(BULLY.state)) || bchase;
-  if (chase) fr = 2.9;          // v2.6: 추격은 더 물러나 공간을 보여준다
+  const chase = (BULLY && BULLY.root.visible && ['chase', 'rise'].includes(BULLY.state)) || bchase;
+  // v2.9 추격: 확대하지 않고 약간 물러난다 — 플레이어 + 앞의 장애물(1.3 m) + 뒤의 Bully가 한 화면에
+  let chaseBox = null;
+  if (chase && BULLY) { const a = Math.min(BULLY.pos.x, vp.x) - .4, b = Math.max(BULLY.pos.x, vp.x) + 1.3; chaseBox = [a, b]; fr = clamp((b - a) / Math.max(1, camera.aspect) * 1.04, 2.9, 3.7); }
   if (RT.state === 'intro') fr = RT.introT < 2.2 ? 1.05 : 1.35;
   if (RT.state === 'select') fr = 2.05;
   if (RT.camFrame) fr = RT.camFrame;       // 테스트 · 사진용 고정 프레임
@@ -7565,29 +7668,36 @@ function updateCamera(dt) {
   const shot = cineShot(); if (shot) fr = shot.fr;          // v2.7: 시네마틱 숏 (Mr. ODD — 발 → 손 → 몸 → 얼굴)
   fr = Math.max(fr, 2.2 / camera.aspect);
   CAM.frame = damp(CAM.frame, fr, RT.state === 'intro' ? .9 : RT.cine ? 3.0 : 1.0, dt);
-  const moving = Math.abs(P.vel.x) > .15;
-  let lead = P.face * .24 * (CAM.frame / 1.8) * (moving ? 1 : .45);
-  if (chase && P.pos.x > 31) lead = .5;                 // 추격: 앞쪽 여백 60%
+  // v2.9 구도: 플레이어를 화면 가운데에 두지 않는다 — 가는 쪽으로 화면 폭의 10% 리드 (오른쪽으로 가면 플레이어는 왼쪽 40%)
+  const moving = Math.abs(P.vel.x) > .15, Wd = CAM.frame * camera.aspect;
+  CAM.dir = damp(CAM.dir ?? P.face, P.face, moving ? 2.4 : .7, dt);        // 돌아설 때 화면이 홱 넘어가지 않게
+  let lead = CAM.dir * Wd * (moving ? .1 : .075);
   if (BUDDY && BUDDY.state === 'burst') lead = (BUDDY.pos.x - P.pos.x) * .5 + .1;   // 상자가 터지는 순간을 보여준다
-  // v2.6: 위협이 있는 쪽 화면을 더 넓게 (Mr. ODD · Bully가 7 m 안에 있으면 그쪽으로 여백)
+  // 적(Mr. ODD · Bully)이 7 m 안에 있으면 적이 있는 쪽의 빈 공간을 더 넓게 — 플레이어는 반대쪽 40% (멀면 적이 화면에 들어오도록 더 옮긴다, 최대 25%)
   if (!chase && RT.state === 'play') {
     let th = null;
     if (ODD && ODD.root.visible && ODD.active) th = ODD.pos.x;
     if (BULLY && BULLY.root.visible && BULLY.state !== 'off' && (th === null || Math.abs(BULLY.pos.x - vp.x) < Math.abs(th - vp.x))) th = BULLY.pos.x;
-    if (th !== null && Math.abs(th - vp.x) < 7) { const dx = th - vp.x; lead = lerp(lead, Math.sign(dx) * Math.min(.55, Math.abs(dx) * .22) * (CAM.frame / 1.8), .7); }
+    if (th !== null && Math.abs(th - vp.x) < 7) { const dx = th - vp.x; CAM.threat = damp(CAM.threat || 0, 1, 2, dt); lead = lerp(lead, Math.sign(dx) * clamp(Math.abs(dx) - .42 * Wd, .1 * Wd, .25 * Wd), CAM.threat); }
+    else CAM.threat = damp(CAM.threat || 0, 0, 2, dt);
   }
+  if (chaseBox) lead = clamp((chaseBox[0] + chaseBox[1]) / 2 - vp.x, -.3 * Wd, .3 * Wd);
   let tx = vp.x + lead;
   if (RT.state === 'intro' && RT.introT < 2.2) tx = -6.2;
   if (RT.state === 'outro') tx = (RT.outroX ?? ST.VENT) - .15;
-  if (shot) tx = shot.x;
+  const sp = shot && shot.at ? shot.at() : shot;           // v2.9: 숏이 움직이는 대상(발 · 손 · 머그 · 얼굴)을 따라갈 수 있다
+  if (shot) tx = sp.x;
   if (RT.state === 'select') tx = 5.3;
-  spring(CAM, 'x', tx, RT.state === 'intro' ? 1.8 : RT.cine ? 4.2 : chase ? 3.4 : 2.6, 1, dt);
+  const kx = RT.state === 'intro' ? 1.8 : RT.cine ? 4.2 : chase ? 3.4 : 2.6;
+  // v2.9: 스프링이 뒤처지는 만큼(속도 × 2/k) 앞으로 — 걷는 동안에도 플레이어가 화면 40% 자리에 머문다
+  CAM.ff = damp(CAM.ff || 0, RT.state === 'play' && !shot ? P.vel.x * 2 / kx : 0, 3, dt);
+  spring(CAM, 'x', tx + CAM.ff, kx, 1, dt);
   if (RT.state === 'select') spring(CAM, 'gy', 0, 2.4, 1, dt);
   else if (P.grounded || P.mode !== 'free' || vp.y < CAM.gy) spring(CAM, 'gy', vp.y, 2.4, 1, dt);
   let gy = CAM.gy;
   if (RT.state === 'intro' && RT.introT < 2.2) gy = .45;
-  if (shot) { CAM.shotY = damp(CAM.shotY ?? gy, (shot.y - .56 - (CAM.frame - 1.8) * .4) / .85, 4, dt); gy = CAM.shotY; } else CAM.shotY = undefined;
-  CAM.zoff = damp(CAM.zoff, RT.state === 'select' ? .2 : vp.z * .35, 2, dt);
+  if (shot) { CAM.shotY = damp(CAM.shotY ?? gy, (sp.y - .56 - (CAM.frame - 1.8) * .4) / .85, 4, dt); gy = CAM.shotY; } else CAM.shotY = undefined;
+  CAM.zoff = damp(CAM.zoff, RT.state === 'select' ? .2 : shot && sp.z !== undefined ? sp.z : vp.z * .35, shot && sp.z !== undefined ? 4 : 2, dt);     // v2.9: 숏은 대상의 깊이를 겨눈다
   const D = CAM.frame / 2 / TANH, yawOff = RT.state === 'select' ? .075 : .13;     // v2.6: 살짝 더 3/4
   CAM.zdy = damp(CAM.zdy || 0, cz && cz.dy && !shot ? cz.dy : 0, 2, dt);          // v2.7: 카메라 존 높이 보정 (테라스: 하늘보다 데크 · 빔 · 구멍을 보여 준다)
   const camY = .56 + gy * .85 + (CAM.frame - 1.8) * .4 + CAM.zdy;
@@ -7600,6 +7710,7 @@ function updateCamera(dt) {
   camera.lookAt(CAM.x + sx * .6, tgtY + sy * .6, CAM.zoff);
   const ex = RT.zone === 'B' && vp.x < 18.4 ? 1.12 : CAM.expo || 1.16;      // 복도(램프가 켜진 좁은 공간)는 조금 낮게
   renderer.toneMappingExposure = damp(renderer.toneMappingExposure, ex, 1.5, dt);
+  if (W.lights.rimP) W.lights.rimP.position.set(vp.x - P.face * .07, vp.y + .3, vp.z - .27);      // v2.9 림 라이트: 플레이어 뒤 · 위
   if (PASS.bokeh) PASS.bokeh.uniforms.focus.value = RT.state === 'select' ? camera.position.distanceTo(V3(SEL_X[RT.selIdx], .15, SEL_Z)) : camera.position.distanceTo(V3(vp.x, vp.y + .12, vp.z));
 }
 function shake(v) { CAM.shake = Math.max(CAM.shake, v); }
@@ -7697,12 +7808,28 @@ function startOddEvent() {
   if (RT.flags.oddStarted) return; RT.flags.oddStarted = true;
   const O = ODD; O.root.visible = true; O.active = true; O.meter = 0; O.susp = null; O.lightT = 1;
   oddSet(15.8, -.12, -Math.PI / 2);
+  // v2.9 등장 연출: 얼굴부터 보여 주지 않는다 — 문틈 → 슬리퍼 → 로브 밑단 → 손 → 머그컵 → 몸 실루엣 → 얼굴 (처음 한 번 · 다시 할 때는 짧게)
+  const wp = o => o.getWorldPosition(V3()), foot = () => { const p = wp(O.legs[0].foot); return { x: p.x - .04, y: .09, z: p.z }; }, at = (o, dy = 0) => () => { const p = wp(o); return { x: p.x, y: p.y + dy, z: p.z }; };
+  // 숏은 시간이 아니라 Mr. ODD가 걸어 들어온 거리(m)로 넘어간다 — 문틀 · 전경에 가리지 않는 자리에서 (얼굴은 창가 달빛 아래)
+  RT.cine = RT.oddReveal ? { t: 0, auto: true, byOdd: 15.8, clock: 0, dur: 3.4, shots: [{ t: 0, x: 14.15, y: .14, fr: .9 }, { t: 2.0, at: foot, fr: .6 }, { t: 2.7, at: () => ({ x: O.pos.x - .3, y: .95, z: O.pos.z }), fr: 3.0 }] }
+    : { t: 0, auto: true, byOdd: 15.8, clock: 0, dur: 6.0, shots: [
+      { t: 0, x: 14.15, y: .14, fr: .9 },                                                                   // 문틈 (복도 불빛)
+      { t: 2.0, at: foot, fr: .55 },                                                                        // 슬리퍼
+      { t: 2.7, at: () => ({ x: O.pos.x - .08, y: .28, z: O.pos.z }), fr: .8 },                                // 로브 밑단
+      { t: 3.4, at: at(O.arms[1].hand, .03), fr: .6 },                                                        // 손
+      { t: 4.0, at: at(O.mug), fr: .48 },                                                                     // 머그컵
+      { t: 4.5, at: () => ({ x: O.pos.x - .3, y: .95, z: O.pos.z }), fr: 3.2 },                               // 몸 실루엣 (창 앞)
+      { t: 5.0, at: at(O.head, .06), fr: .72 }                                                                // 얼굴 (창가에서 돌아선다 — 달빛)
+    ] };
+  const firstReveal = !RT.oddReveal;
+  RT.oddReveal = true;
   oddPlan([
     { type: 'call', fn: () => { AU.door('lounge', 'handle'); showHint('hide', 6); subtitle('…문고리가 돌아간다.', 2.4); } },
     { type: 'wait', dur: 1.3 },
     { type: 'call', fn: () => { W.dyn.door.userData.target = 1.25; AU.door('lounge', 'unlatch'); } },   // 경첩 삐걱임은 문이 도는 속도에서 나온다
     { type: 'walk', x: 13.3, z: -.2 },
     { type: 'walk', x: 11.0, z: -.8 },
+    ...(firstReveal ? [{ type: 'turn', yaw: -.25 }, { type: 'wait', dur: 1.5 }] : []),      // v2.9: 처음 등장 때만 창가에서 돌아서 얼굴을 보인다
     { type: 'walk', x: 3.92, z: -1.05 },
     { type: 'lamp', at: V3(3.337, 1.18, -.8), fn: lampOff },
     { type: 'walk', x: 6.85, z: -.62 },
@@ -8103,6 +8230,7 @@ function resetWorldState() {
 }
 /* v2.5: 처음 하는 새 게임(또는 타이틀의 '튜토리얼')은 현관 앞 튜토리얼부터 */
 function newGame() {
+  RT.oddReveal = false;        // v2.9: 새 게임이면 Mr. ODD 등장 연출을 처음부터
   if (RT.forceTut || !tutDone()) { RT.forceTut = false; startTutorial(); }
   else beginStory();
 }
@@ -8267,11 +8395,12 @@ function gameStep(dt) {
     for (const tr of W.triggers) if (!RT.fired.has(tr.id) && P.pos.x > tr.x0 && P.pos.x < tr.x1) { RT.fired.add(tr.id); tr.fn(); }
     if (RT.tut) updateTutorial(dt);
     updateStages(dt); updateUse(dt);         // v2.7: 스테이지 로직(플래터 · 스피커 · 바람 · 이벤트) · E 길게 상호작용
+    if (RT.cine && RT.cine.auto) { const C = RT.cine; C.clock += dt; C.t = C.byOdd ? Math.max(C.t + (ODD.moving < .05 && ODD.pos.x < 14.6 ? dt * .8 : 0), C.byOdd - ODD.pos.x) : C.t + dt; if (C.t >= C.dur || C.clock > 18) RT.cine = null; }     // 멈춰 서 있으면 시간으로 넘어간다      // v2.9: 스스로 흐르는 시네마틱 (거실 Mr. ODD 등장)
   } else if (RT.state !== 'paused') { RT.useCur = null; const u = $('use'); if (u) u.classList.remove('show'); }
   if (RT.state === 'outro' && RT.stage && STAGES[RT.stage].step && STAGES[RT.stage].group) STAGES[RT.stage].step(dt);
   if (RT.state === 'play' || RT.state === 'intro' || RT.state === 'title' || RT.state === 'outro') playerStep(dt);
   if (RT.caught) updateCaught(dt);
-  if (ODD && ODD.root.visible && RT.state !== 'paused' && RT.state !== 'select') { if (!RT.caught || ODD.susp) oddStep(dt, RT.t); oddPerceive(dt); }
+  if (ODD && ODD.root.visible && RT.state !== 'paused' && RT.state !== 'select') { if (!RT.caught || ODD.susp) oddStep(dt, RT.t); if (!(RT.cine && RT.cine.auto)) oddPerceive(dt); }     // 등장 연출 동안은 보지 못한다
   if (BULLY && BULLY.root.visible && RT.state !== 'paused' && RT.state !== 'title' && RT.state !== 'select') { bullyStep(dt, RT.t); bullyPerceive(dt); }
   if (BUDDY && BUDDY.state !== 'off' && RT.state !== 'paused' && RT.state !== 'title' && RT.state !== 'select') buddyStep(dt, RT.t);
 }
@@ -8358,8 +8487,10 @@ function boot() {
   const fr = document.fonts && document.fonts.ready ? Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 2500))]) : Promise.resolve();
   fr.then(done, done);
   // v2.7 Asset Registry: assets/characters/… · assets/environment/… 에 최종 GLB가 있으면 PLACEHOLDER 대신 쓴다 (없으면 그대로)
-  loadAllCharacters().then(probeHouseModels).then(() => { const m = missingGLBs(); RT.missing = m; console.info('[ODD HAUS] Missing GLB Asset List (' + m.length + '):\n' + m.join('\n')); });
-  window.ODD2 = { PASS, THREE, RT, fn: { bullyAnimate, buddyAnimate, oddAnimate, animateVin, bullySet, oddSet, pickClip, clipCands, perfSample }, get MODEL_ANIM() { return MODEL_ANIM; }, NODEPTH, CHARACTER_ASSETS, STAGES, STAGE_ORDER, ASSET_STATE, PLAYER, HOUSE, missingGLBs, gotoStage, ensureStage, unloadStage, stageAt, P, W, get DJ() { return DJ; }, get TR() { return TR; }, get LR() { return LR; }, ST, get ODD() { return ODD; }, get BULLY() { return BULLY; }, get BUDDY() { return BUDDY; }, get VIN() { return VIN; }, HEROES, HERO_DEFS, TUT, setHero, openSelect, useAbility, CAM, AU, IN, act, respawn, setCheckpoint, gameStep, camera, tick: (dt, n = 1) => { for (let i = 0; i < n; i++) tick(dt, false); }, render: () => composer.render(1 / 60), get renderer() { return renderer; }, get scene() { return scene; }, toggleVolumes, CPS, applyZone, setMode, surfaceUnder, ROOMS, RX };
+  const assetsReady = loadAllCharacters().then(probeHouseModels).then(() => { const m = missingGLBs(); RT.missing = m; console.info('[ODD HAUS] Missing GLB Asset List (' + m.length + '):\n' + m.join('\n')); });
+  if (VT_ON) visualTest(assetsReady);       // v2.9: ?visualtest=1 — 게임 시작 전 캐릭터 비율 확인
+  window.ODD2 = { PASS, THREE, RT, VT, fn: { bullyAnimate, buddyAnimate, oddAnimate, animateVin, bullySet, oddSet, pickClip, clipCands, perfSample },
+    dev: { buildHero, HERO_DEFS, animateVin, hoseRig, hoseRigUpdate, HOSE_N, HOSE_LIMBS, hoseFrame, buildBuddy, buddyAnimate, buildBully, bullyAnimate, buildOdd, oddAnimate, MAT, T, canvasTex, texFromCanvas, normalFromHeight, pixels, mulberry, vnoise, RoundedBoxGeometry, linkRigModel, measureModel, get HERO_M() { return HERO_M; } }, ASSET_MEASURE, get MODEL_ANIM() { return MODEL_ANIM; }, NODEPTH, CHARACTER_ASSETS, STAGES, STAGE_ORDER, ASSET_STATE, PLAYER, HOUSE, missingGLBs, gotoStage, ensureStage, unloadStage, stageAt, P, W, get DJ() { return DJ; }, get TR() { return TR; }, get LR() { return LR; }, ST, get ODD() { return ODD; }, get BULLY() { return BULLY; }, get BUDDY() { return BUDDY; }, get VIN() { return VIN; }, HEROES, HERO_DEFS, TUT, setHero, openSelect, useAbility, CAM, AU, IN, act, respawn, setCheckpoint, gameStep, camera, tick: (dt, n = 1) => { for (let i = 0; i < n; i++) tick(dt, false); }, render: () => composer.render(1 / 60), get renderer() { return renderer; }, get scene() { return scene; }, toggleVolumes, CPS, applyZone, setMode, surfaceUnder, ROOMS, RX };
 }
 /* =====================================================================
    8b. v2.3 캐릭터 — 선택 화면 · 교체 · Q 능력
@@ -8508,6 +8639,145 @@ function updateHeroFx(dt, t) {
   const chip = $('abil'); chip.classList.toggle('show', RT.state === 'play'); $('fragsUI').style.opacity = RT.state === 'select' ? 0 : '';
   const D = HERO_DEFS[RT.hero], f = P.abilCD > 0 ? 1 - P.abilCD / D.cd : 1;
   chip.style.setProperty('--cd', f.toFixed(3)); chip.classList.toggle('ready', f >= 1);
+}
+/* =====================================================================
+   v2.9 ?visualtest=1 (또는 #visualtest) — 캐릭터 비율 확인 모드 (게임 시작 전)
+   모든 캐릭터를 같은 바닥(10 cm 격자)에 세운다: Picker 23 · Vin 24 · A.A 28 · Locke 30 · Rex 35 · Buddy 어깨 33 · Bully 150 · Mr. ODD 180 (cm)
+   자유 카메라: 드래그 = 회전 · 휠/핀치 = 확대 · 오른쪽 드래그/두 손가락 = 이동, 앞 · 옆 · 뒤 · 3/4 · 위 버튼, 캐릭터별 초점.
+   이름표: 기준 키 · 화면 실측 · GLB 파일 실측 · GLB / PLACEHOLDER / REJECTED. 기준과 15% 넘게 다르면 빨간색 — 그 GLB는 본편에 쓰지 않는다
+   (불러올 때 measureModel이 같은 기준으로 거른다). 게임 루프는 멈추고 이 장면만 그린다.
+   ===================================================================== */
+const VT_ON = /[?&]visualtest=1\b/.test(location.search) || /^#visualtest\b/.test(location.hash);
+const VT_ROW = [['picker', 'Picker', .23, 0], ['vin', 'Vin', .24, .3], ['aa', 'A.A.', .28, .62], ['locke', 'Locke', .30, .97], ['rex', 'Rex', .35, 1.35], ['buddy', 'Buddy (어깨)', .33, 1.95], ['bully', 'Bully', 1.5, 2.95], ['mrOdd', 'Mr. ODD', 1.8, 4.05]];
+const VT_PROPS = new Set(['guitar', 'scepter', 'flash', 'mug', 'beam', 'cone']);
+const VT = { on: VT_ON, rows: [] };
+function vtMeasure(id, root) {
+  if (id === 'buddy') { let body = null; root.traverse(o => { if (!body && o.userData.rig === 'body') body = o; }); if (body) return body.localToWorld(V3(0, .134, .075)).y; }
+  root.updateMatrixWorld(true);
+  const b = new THREE.Box3(), skip = o => { for (let p = o; p && p !== root; p = p.parent) { if (VT_PROPS.has(p.userData.rig) || p.userData.vtSkip) return true; if (!p.visible) return true; } return false; };
+  root.traverse(o => { if (!(o.isMesh || o.isSkinnedMesh) || !o.geometry || !(o.layers.mask & 1) || o.material.depthTest === false || o.material.blending === THREE.AdditiveBlending || skip(o)) return;
+    if (o.isSkinnedMesh) { const g = o.geometry, p = g.attributes.position, v = V3(); for (let i = 0; i < p.count; i += 3) { o.getVertexPosition(i, v); o.localToWorld(v); b.expandByPoint(v); } }
+    else { if (!o.geometry.boundingBox) o.geometry.computeBoundingBox(); b.union(o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld)); } });
+  return b.isEmpty() ? 0 : b.max.y - Math.max(0, Math.min(b.min.y, .02));
+}
+function visualTest(ready) {
+  RT.noLoop = true; RT.state = 'visualtest';
+  for (const id of ['title', 'select', 'pause', 'sound', 'hud', 'touch', 'chapter', 'subtitle', 'hint', 'tut', 'use', 'abil', 'toast', 'eye', 'fragsUI', 'devtag', 'fx', 'grain', 'controls']) { const e = $(id); if (e) e.style.display = 'none'; }
+  $('fade').style.opacity = 0;
+  AU.music && AU.music(null, .2);
+  const S = new THREE.Scene(); S.background = new THREE.Color(0x1c1e24);
+  S.add(new THREE.HemisphereLight(0xe4e8ff, 0x2a2420, 1.05));
+  const key = new THREE.DirectionalLight(0xffe6c8, 2.2); key.position.set(-1.5, 3.2, 3.4); key.target.position.set(2, 0, 0); key.castShadow = true; key.shadow.mapSize.set(2048, 2048);
+  Object.assign(key.shadow.camera, { left: -3.5, right: 3.5, top: 3, bottom: -3, near: .5, far: 12 }); key.shadow.bias = -.0004; key.shadow.normalBias = .01; S.add(key, key.target);
+  const rim = new THREE.DirectionalLight(0x9fb8ff, 1.6); rim.position.set(3, 2.6, -3.5); S.add(rim);
+  const fill = new THREE.DirectionalLight(0xffc890, .5); fill.position.set(5, 1, 2); S.add(fill);
+  // 바닥: 10 cm 격자 (1 m마다 굵은 선)
+  const gc = document.createElement('canvas'); gc.width = gc.height = 512; { const g = gc.getContext('2d'); g.fillStyle = '#4a3d33'; g.fillRect(0, 0, 512, 512); g.strokeStyle = 'rgba(255,240,220,.18)'; g.lineWidth = 2; for (let i = 0; i <= 10; i++) { g.beginPath(); g.moveTo(i * 51.2, 0); g.lineTo(i * 51.2, 512); g.moveTo(0, i * 51.2); g.lineTo(512, i * 51.2); g.stroke(); } g.strokeStyle = 'rgba(255,240,220,.5)'; g.lineWidth = 5; g.strokeRect(0, 0, 512, 512); }
+  const gt = new THREE.CanvasTexture(gc); gt.colorSpace = THREE.SRGBColorSpace; gt.wrapS = gt.wrapT = THREE.RepeatWrapping; gt.repeat.set(9, 5); gt.anisotropy = 8;
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(9, 5), new THREE.MeshStandardMaterial({ map: gt, roughness: .85 })); floor.rotation.x = -Math.PI / 2; floor.position.set(2, 0, 0); floor.receiveShadow = true; S.add(floor);
+  // 키 자: 왼쪽(작은 캐릭터용 0–40 cm, 1 cm 눈금) · 오른쪽(0–200 cm, 10 cm 눈금)
+  const tick = (x, z, y, w, c) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, .0015, .0015), new THREE.MeshBasicMaterial({ color: c })); m.position.set(x, y, z); S.add(m); };
+  const label = (txt, x, y, z, s = .03) => { const c = document.createElement('canvas'); c.width = 128; c.height = 48; const g = c.getContext('2d'); g.fillStyle = '#f2e8d8'; g.font = 'bold 34px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(txt, 64, 24); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, depthTest: false })); sp.scale.set(s * 2.67, s, 1); sp.position.set(x, y, z); S.add(sp); };
+  { const post = new THREE.Mesh(new THREE.BoxGeometry(.006, .4, .006), new THREE.MeshBasicMaterial({ color: 0xe8dcc4 })); post.position.set(-.2, .2, -.12); S.add(post);
+    for (let cm = 0; cm <= 40; cm++) tick(-.2 + (cm % 5 ? .008 : .016), -.12, cm / 100, cm % 10 ? (cm % 5 ? .016 : .03) : .05, cm % 10 ? 0xb8ac98 : 0xffffff);
+    for (let cm = 0; cm <= 40; cm += 10) label(cm + ' cm', -.27, cm / 100, -.12, .022);
+    const post2 = new THREE.Mesh(new THREE.BoxGeometry(.012, 2, .012), new THREE.MeshBasicMaterial({ color: 0xe8dcc4 })); post2.position.set(4.75, 1, -.3); S.add(post2);
+    for (let cm = 0; cm <= 200; cm += 10) tick(4.75, -.3, cm / 100, cm % 50 ? .06 : .14, cm % 50 ? 0xb8ac98 : 0xffffff);
+    for (let cm = 0; cm <= 200; cm += 50) label(cm + ' cm', 4.95, cm / 100, -.3, .07); }
+  // 캐릭터를 옮겨 세운다 (게임 리그 그대로 — GLB가 연결돼 있으면 GLB가, 아니면 PLACEHOLDER가 보인다)
+  const G = new THREE.Group(); S.add(G);
+  const lineFor = (x, h, c) => { const m = new THREE.Mesh(new THREE.BoxGeometry(h > 1 ? .7 : .22, .002, .002), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: .8 })); m.position.set(x, h, -.02); m.userData.vtSkip = true; G.add(m); return m; };
+  const st0 = () => ({ t: 0, grounded: true, pos: V3(), vel: V3(), vy: 0, face: 1, crouch: 0, run: false, runRef: 1.2, scared: 0, caught: false, hide: false, mode: 'free', md: null, landImpulse: 0, jumped: false, light: false, groundY: 0, yawOverride: 0, lookAt: { x: 0, y: .2 } });
+  VT.rows = [];
+  const panel = document.createElement('div'); panel.id = 'vtPanel'; document.body.appendChild(panel);
+  const css = document.createElement('style'); css.textContent = `#vtPanel{position:fixed;left:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:60;max-width:min(420px,calc(100vw - 24px));background:rgba(16,17,22,.86);color:#efe6d6;font:13px/1.45 system-ui,sans-serif;padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.12)}
+#vtPanel h1{font-size:14px;margin:0 0 4px;letter-spacing:.06em}#vtPanel .r{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}#vtPanel button{font:12px system-ui,sans-serif;background:#2c2f38;color:#efe6d6;border:1px solid #474b57;border-radius:5px;padding:4px 8px;cursor:pointer}#vtPanel button:hover{background:#3a3e4a}
+#vtPanel small{color:#a9a196}#vtPanel #vtFold{float:right;margin:-2px 0 0 8px;padding:2px 7px}#vtPanel.min>:not(h1){display:none}#vtPanel.min h1{margin:0}.vtTag{position:fixed;z-index:59;transform:translate(-50%,-100%);pointer-events:none;background:rgba(16,17,22,.82);color:#efe6d6;font:11px/1.35 system-ui,sans-serif;padding:3px 6px;border-radius:5px;white-space:nowrap;text-align:center;border:1px solid rgba(255,255,255,.12)}
+.vtTag b{font-size:12px}.vtTag .ok{color:#7fe08a}.vtTag .ph{color:#ffc860}.vtTag .bad{color:#ff6a5a}`; document.head.appendChild(css);
+  for (const [id, name, h, x] of VT_ROW) {
+    const A = CHARACTER_ASSETS[id], N = A.kind === 'hero' ? HEROES[id] : id === 'buddy' ? BUDDY : id === 'bully' ? BULLY : ODD;
+    const top = N.holder || N.root; G.add(top); top.visible = true; N.root.visible = true; if (N.contact) N.contact.visible = false;
+    const row = { id, name, h, x, N, st: A.kind === 'hero' ? st0() : null, tag: document.createElement('div'), line: lineFor(x, h, 0x7fe08a), measured: 0 };
+    row.tag.className = 'vtTag'; document.body.appendChild(row.tag); VT.rows.push(row);
+  }
+  // NPC 기본 자세 (정면 · 가만히)
+  const npcIdle = () => {
+    const Bd = BUDDY; Object.assign(Bd, { state: 'idle', stT: 0, yaw: 0, prevYaw: 0, visYaw: 0, moving: 0, onGround: true, vy: 0, happyT: 0, warnT: 0, barkPulse: 0, mode: 'idle' }); Bd.pos.set(VT_ROW[5][3], 0, 0); Bd.prev.copy(Bd.pos);
+    const Bl = BULLY; Object.assign(Bl, { state: 'leave', stT: 9, yaw: 0, prevYaw: 0, visYaw: 0, moving: 0, act: null, peek: false }); Bl.pos.set(VT_ROW[6][3], 0, 0); Bl.prev.copy(Bl.pos); Bl.look.set(VT_ROW[6][3], 1.35, 4);
+    const O = ODD; Object.assign(O, { yaw: 0, prevYaw: 0, visYaw: 0, moving: 0 }); O.pos.set(VT_ROW[7][3], 0, 0); O.prev.copy(O.pos); O.aimT.set(VT_ROW[7][3], .4, 2);
+  };
+  npcIdle();
+  // 카메라 (자유 궤도)
+  const cv = renderer.domElement, rc = () => cv.getBoundingClientRect();
+  const cam = new THREE.PerspectiveCamera(35, rc().width / Math.max(1, rc().height), .01, 60);
+  const C = VT.cam = { yaw: .35, pitch: .18, dist: 7.2, tgt: V3(2, .7, 0) };
+  const place = () => { const cp = Math.cos(C.pitch); cam.position.set(C.tgt.x + Math.sin(C.yaw) * cp * C.dist, C.tgt.y + Math.sin(C.pitch) * C.dist, C.tgt.z + Math.cos(C.yaw) * cp * C.dist); cam.lookAt(C.tgt); };
+  const focus = (x, y, d) => { C.tgt.set(x, y, 0); C.dist = d; };
+  panel.innerHTML = `<h1><button id="vtFold" title="패널 접기 · 펴기">접기</button>VISUAL TEST · 캐릭터 비율</h1><small>같은 바닥 · 10 cm 격자 · 초록 선 = 기준 키. 드래그 회전 · 휠/핀치 확대 · 오른쪽 드래그(두 손가락) 이동</small>
+<div class="r"><button data-v="0">앞</button><button data-v="1.5708">옆</button><button data-v="3.1416">뒤</button><button data-v=".7">3/4</button><button data-v="top">위</button></div>
+<div class="r"><button data-f="all">전체</button><button data-f="tiny">작은 히어로 5</button><button data-f="buddy">Buddy</button><button data-f="bully">Bully</button><button data-f="odd">Mr. ODD</button></div>
+<div class="r"><button data-a="spin">자동 회전</button><button data-a="game">게임으로 →</button></div><div id="vtSum" style="margin-top:6px"></div>`;
+  panel.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return;
+    if (b.id === 'vtFold') { const m = panel.classList.toggle('min'); b.textContent = m ? '펴기' : '접기'; return; }
+    if (b.dataset.v) { if (b.dataset.v === 'top') C.pitch = 1.25; else { C.yaw = +b.dataset.v; C.pitch = .15; } }
+    if (b.dataset.f) ({ all: () => focus(2, .7, 7.2), tiny: () => focus(.68, .14, 1.9), buddy: () => focus(1.95, .22, 1.4), bully: () => focus(2.95, .8, 3.4), odd: () => focus(4.05, .95, 4) })[b.dataset.f]();
+    if (b.dataset.a === 'spin') VT.spin = !VT.spin;
+    if (b.dataset.a === 'game') { if (location.search) location.href = location.pathname; else { try { history.replaceState(null, '', location.pathname); } catch (e) { } location.reload(); } } });
+  // 입력: 마우스 · 터치
+  const ptrs = new Map(); let last = null, pinch = 0;
+  cv.style.touchAction = 'none';
+  cv.addEventListener('contextmenu', e => e.preventDefault());
+  cv.addEventListener('pointerdown', e => { cv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY, b: e.button }); last = null; pinch = 0; });
+  cv.addEventListener('pointerup', e => { ptrs.delete(e.pointerId); last = null; pinch = 0; });
+  cv.addEventListener('pointercancel', e => { ptrs.delete(e.pointerId); last = null; pinch = 0; });
+  const pan = (dx, dy) => { const k = C.dist * .0012, r = V3(Math.cos(C.yaw), 0, -Math.sin(C.yaw)); C.tgt.addScaledVector(r, -dx * k); C.tgt.y = clamp(C.tgt.y + dy * k, 0, 2.2); };
+  cv.addEventListener('pointermove', e => { if (!ptrs.has(e.pointerId)) return; const p = ptrs.get(e.pointerId), dx = e.clientX - p.x, dy = e.clientY - p.y; p.x = e.clientX; p.y = e.clientY;
+    if (ptrs.size >= 2) { const a = [...ptrs.values()], d = Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y); if (pinch) C.dist = clamp(C.dist * pinch / d, .25, 14); pinch = d; pan(dx * .5, dy * .5); return; }
+    if (p.b === 2 || e.shiftKey) pan(dx, dy); else { C.yaw -= dx * .006; C.pitch = clamp(C.pitch + dy * .005, -.15, 1.45); } });
+  cv.addEventListener('wheel', e => { e.preventDefault(); C.dist = clamp(C.dist * Math.exp(e.deltaY * .0012), .25, 14); }, { passive: false });
+
+  // 매 프레임: 가만히 선 자세(숨쉬기 · 눈 깜빡임) + 이름표
+  let t0 = performance.now(), tt = 0;
+  const v = V3();
+  const summary = () => { const bad = VT.rows.filter(r => r.dev > .15).map(r => r.name), glb = VT.rows.filter(r => r.state === 'glb').map(r => r.name);
+    $('vtSum').innerHTML = `GLB: <b style="color:#7fe08a">${glb.join(', ') || '없음'}</b><br>PLACEHOLDER: <b style="color:#ffc860">${VT.rows.filter(r => r.state !== 'glb').map(r => r.name).join(', ') || '없음'}</b>` + (bad.length ? `<br><b style="color:#ff6a5a">비율 이상(본편 미적용): ${bad.join(', ')}</b>` : '<br><span style="color:#7fe08a">비율 이상 없음 (±15%)</span>'); };
+  VT.measure = () => VT.rows.map(r => ({ id: r.id, target: r.h, measured: +r.measured.toFixed(3), file: ASSET_MEASURE[r.id] ? ASSET_MEASURE[r.id].measured : null, state: r.state, dev: +r.dev.toFixed(3) }));
+  VT.frame = (dt) => {
+    tt += dt; RT.t = tt;
+    if (VT.spin) C.yaw += dt * .35;
+    for (const r of VT.rows) {
+      if (r.st) { const s = r.st; s.t = tt; s.pos.set(r.x, 0, 0); s.yawOverride = 0; const act = r.N.active; r.N.active = false; animateVin(r.N, s, dt); r.N.active = act; }
+    }
+    BUDDY.stT += dt; buddyAnimate(dt, tt, 1); BULLY.stT += dt; bullyAnimate(dt, tt, 1); oddAnimate(dt, tt, 1);
+    const R_ = rc(); if (Math.abs(cam.aspect - R_.width / Math.max(1, R_.height)) > 1e-3) { cam.aspect = R_.width / Math.max(1, R_.height); cam.updateProjectionMatrix(); }
+    place();
+    renderer.setRenderTarget(null); renderer.render(S, cam);
+    for (const r of VT.rows) {
+      r.measured = vtMeasure(r.id, r.N.holder || r.N.root); r.state = ASSET_STATE['chr:' + r.id] || 'placeholder';
+      const fileM = ASSET_MEASURE[r.id]; r.dev = Math.abs((r.state === 'glb' && fileM ? fileM.measured : r.measured) / r.h - 1);
+      r.line.material.color.setHex(r.dev > .15 ? 0xff6a5a : 0x7fe08a);
+      v.set(r.x, Math.max(r.h, r.measured) + (r.h > 1 ? .12 : .045 + (VT.rows.indexOf(r) % 2) * .07), 0).project(cam);
+      const on = v.z < 1 && Math.abs(v.x) < 1.2 && Math.abs(v.y) < 1.2; r.tag.style.display = on ? '' : 'none';
+      if (on) { r.tag.style.left = (R_.left + (v.x + 1) / 2 * R_.width).toFixed(0) + 'px'; r.tag.style.top = (R_.top + (1 - v.y) / 2 * R_.height).toFixed(0) + 'px'; }
+      const cls = r.dev > .15 ? 'bad' : r.state === 'glb' ? 'ok' : 'ph', label = r.dev > .15 ? (r.state === 'glb' ? 'REJECTED' : 'PLACEHOLDER · 비율 이상') : r.state === 'glb' ? 'GLB' : /^rejected/.test(r.state) ? 'REJECTED' : 'PLACEHOLDER';
+      r.tag.innerHTML = `<b>${r.name}</b> <span class="${cls}">${label}</span><br>기준 ${(r.h * 100).toFixed(0)} · 화면 ${(r.measured * 100).toFixed(1)}${fileM ? ' · 파일 ' + (fileM.measured * 100).toFixed(1) : ''} cm`;
+    }
+    // 멀리서 보면 작은 히어로 이름표가 겹친다 → 겹치는 이름표는 위로 쌓는다 (가는 선으로 제자리 표시)
+    const placed = [];
+    for (const r of VT.rows) {
+      if (r.tag.style.display === 'none') continue;
+      const w = r.tag.offsetWidth, h = r.tag.offsetHeight, x = parseFloat(r.tag.style.left), y0 = parseFloat(r.tag.style.top); let y = y0;
+      for (let k = 0; k < 12; k++) { const hit = placed.find(p => Math.abs(p.x - x) < (p.w + w) / 2 + 2 && y > p.y - p.h - 2 && y - h < p.y + 2); if (!hit) break; y = hit.y - hit.h - 3; }
+      r.tag.style.top = y.toFixed(0) + 'px'; r.tag.style.borderBottom = y < y0 - 1 ? '2px solid rgba(239,230,214,.5)' : ''; placed.push({ x, y, w, h });
+    }
+    summary();
+  };
+  const loop = now => { if (!VT.on) return; requestAnimationFrame(loop); const dt = Math.min(.05, (now - t0) / 1000 || 0); t0 = now; try { VT.frame(dt); } catch (e) { console.error(e); } };
+  // 처음 자세를 미리 굳힌다 (느린 기기에서도 첫 화면부터 선 자세)
+  const warm = () => { npcIdle(); for (let i = 0; i < 150; i++) { tt += 1 / 60; for (const r of VT.rows) if (r.st) { r.st.t = tt; r.st.pos.set(r.x, 0, 0); const act = r.N.active; r.N.active = false; animateVin(r.N, r.st, 1 / 60); r.N.active = act; } BUDDY.stT += 1 / 60; buddyAnimate(1 / 60, tt, 1); BULLY.stT += 1 / 60; bullyAnimate(1 / 60, tt, 1); oddAnimate(1 / 60, tt, 1); } };
+  warm();
+  Promise.resolve(ready).catch(() => { }).then(() => { warm(); requestAnimationFrame(loop); });
+  VT.started = true;
 }
 
 // 페이지가 새 버전으로 갱신될 때 진행(체크포인트)을 넘겨받는다
