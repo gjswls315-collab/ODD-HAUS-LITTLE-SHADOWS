@@ -1,4 +1,7 @@
-# tools/glb — GLB 제작 · 확인 도구
+# tools/glb — GLB 제작 · 확인 도구 (PROTOTYPE 전용)
+
+> v2.9에서 이 도구로 만든 Vin · Buddy · Bully · Lounge GLB는 Three.js 도형을 조립한 것이라 **최종 아트로 인정하지 않는다** — PROTOTYPE이다 ([CLAUDE.md](../../CLAUDE.md) 2-2).
+> 리뷰 후보(최종 아트 후보)는 [tools/blender/](../blender/)에서 만든다. `inspect.js` · `view.js` · `status.js`는 그대로 쓴다.
 
 게임(`index.html`)을 헤드리스 브라우저로 열고, **게임의 실제 리그(뼈대 · 관절 이름)** 를 그대로 거울 노드로 옮겨 최종 모델을 만든 뒤 GLB로 저장한다.
 그래서 GLB를 넣어도 이동 · 점프 · 충돌 · 퍼즐 코드는 바뀌지 않는다 — 게임은 리그를 움직이고, GLB는 그 리그에 붙어서 따라간다.

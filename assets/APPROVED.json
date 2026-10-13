@@ -1,0 +1,4 @@
+{
+  "_note": "사용자가 디자인 리뷰(review/index.html)에서 눈으로 승인한 GLB만 여기에 적는다. 예: \"assets/characters/vin/chr_vin.glb\": {\"date\": \"YYYY-MM-DD\", \"by\": \"사용자\", \"from\": \"assets/review/chr_vin_review.glb\"}. Claude는 스스로 적지 않는다.",
+  "approved": {}
+}

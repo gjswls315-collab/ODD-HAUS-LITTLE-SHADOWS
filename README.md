@@ -18,7 +18,7 @@
 | v2.1 | **아트 보드 톤앤무드 맞춤** — 리틀 나이트메어 계열의 질감 · 조명 · 움직임. Vin을 보드 비율로 다시 만듦(큰 광택 눈, 퍼프 장갑, 굵은 하이탑, 손전등, 비닐 이방성 하이라이트). Mr. ODD 최종 룩(빨간 체크 로브 · 콧수염 · 곱슬머리 · ODD 머그). 책으로 꽉 찬 책장 · 레코드 캐비닛 · 벨벳 소파 · 액자 벽 · 벽등으로 세트 채움. 블룸 · 피사계 심도 · 색 보정 · 필름 그레인. 발이 미끄러지지 않는 보행, 스프링 기반 2차 모션, 렌더 보간, 핸드헬드 카메라 |
 | v2.2 | **제작 순서 4–5단계: 잡기 · 밀기 · 오르기 + 02 LP LIBRARY** — 모서리 매달리기/올라서기, 크레이트 · 책 더미 밀기/당기기, 문손잡이 · 걸쇠에 매달리기, 사다리 · 헤드폰 케이블 오르내리기, 슬라이딩. 거실 출구를 문손잡이 퍼즐로 바꿈. 5단 LP 큐브 선반 도서관(LP 약 1만 장 인스턴싱), Bully 리듬 스텔스(연주 6.2초 / 청취 3.8초)와 첫 추격, 스튜디오 펫도어 엔딩. 레코드 조각 6개 |
 | v2.4 | **오디오 전면 교체 — THE HOUSE IS THE SOUNDTRACK** — 방마다 다른 잔향 · 룸톤, 실제 물체 위치의 3D 소리와 벽 너머 차폐, 예측할 수 없는 랜덤 앰비언트 이벤트(재사용 가능한 존 시스템), 속도에 따라 달라지는 문 경첩, 바닥 재질별 발소리와 숨, 다이내믹 사일런스, 위험 음악 대신 '집이 변하는' 위험층, 스테이지 음악을 BGM이 아닌 집 안의 소리(먼 LP · 새어 나오는 레코드 → 바이닐 스톱 · 테이프)로. 사운드 룸 · 볼륨 4종. 게임플레이는 그대로 |
-| v2.9 | **최종 GLB 4개(Vin · Buddy · Bully · 거실) + `?visualtest=1` 비율 확인 + 카메라 구도 · 푸른 그림자 + 정직 규칙** — 저장소에 실제 파일: `assets/characters/vin/chr_vin.glb` · `assets/characters/buddy/npc_buddy.glb` · `assets/characters/bully/enemy_bully.glb`(150 cm 인간 소년 비율) · `assets/environment/lounge/env_lounge.glb`(동선 그대로, 보이는 방만). 게임 리그에 연결돼 이동 · 점프 · 충돌 · 퍼즐 코드는 그대로. 카메라: 진행 방향 리드(플레이어 40%) · 적 쪽 여백 · 추격 때 Bully까지 한 화면 · Mr. ODD 등장 7숏. 조명: 검정 대신 푸른 회색 · 플레이어 뒤 림 라이트. **아직 미완성(PLACEHOLDER)**: Picker · A.A. · Locke · Rex · Mr. ODD, 다른 방 5개 |
+| v2.9 | **PROTOTYPE GLB 4개(Vin · Buddy · Bully · 거실 — 코드 도형 조립, 최종 아트 아님) + `?visualtest=1` 비율 확인 + 카메라 구도 · 푸른 그림자 + 정직 규칙** — 저장소에 실제 파일: `assets/characters/vin/chr_vin.glb` · `assets/characters/buddy/npc_buddy.glb` · `assets/characters/bully/enemy_bully.glb`(150 cm 인간 소년 비율) · `assets/environment/lounge/env_lounge.glb`(동선 그대로, 보이는 방만). 게임 리그에 연결돼 이동 · 점프 · 충돌 · 퍼즐 코드는 그대로. 카메라: 진행 방향 리드(플레이어 40%) · 적 쪽 여백 · 추격 때 Bully까지 한 화면 · Mr. ODD 등장 7숏. 조명: 검정 대신 푸른 회색 · 플레이어 뒤 림 라이트. **아직 미완성(PLACEHOLDER)**: Picker · A.A. · Locke · Rex · Mr. ODD, 다른 방 5개 |
 | v2.8 | **캐릭터 8인 PLACEHOLDER 다듬기(코드 3D — 최종 GLB 아님 · 캐릭터 시트 정면 · 측면 · 뒷면 기준) + Bully 등장 줄이기 + v2.7 남은 문제 수정** — A.A.(몸보다 넓은 검은 니트 비니 · 파란 그래피티 티), Locke(둥근 사각 열쇠 머리 · 발치까지 내려오는 열쇠 날 · 뒤로 쓴 버건디 캡 · 빨간 배낭), Rex(바닥까지 덮는 빨간 망토 · 담비털), Buddy(큰 머리의 크림색 강아지 · 밤색 늘어진 귀 · 부드러운 털), Mr. ODD(달걀형 몸 · 발목까지 오는 로브 · 풍성한 곱슬머리), Bully(큰 머리 · 금발 곱슬 · 검은 티 · 검은 청바지 · 빨간 하이탑). Bully는 서고 잠입 + 추격 한 번만(복도 매복 · 문 아래 손 삭제). DJ Booth 어둠 0.78, GitHub Pages의 GLB 404 콘솔 줄 0, 착지 클립 버그 수정 + 클립 47개 검사, Mr. ODD 첫 숏(발), 잠긴 방 수색 38 → 21초, 터치 '잡기' 길게 누르기 확인 · 드로우콜 절감 |
 | v2.7 | **스테이지 04 · 05 · 06을 실제로 플레이 + 스튜디오 동선 재구성 + GLB 자동 교체 레지스트리** — STUDIO: 케이블 → 앰프(콘센트) → 책상(다리 오르기) → 믹서(슬라이더 · 노브 · 스위치) → 녹음 부스 유리 → 컨트롤 룸(숨은 점검구). DJ BOOTH: 회전 플래터 발판 · 스피커 펄스 넉백 · 믹서로 끄기. TERRACE: 난간 아래 빔 균형(자동 감속 · 돌풍) · 데크 구멍 낙하 → 체크포인트. LOCKED ROOM: POWER · LOCK · SOUND 기계 → 트렁크 → 레버 → Mr. ODD 환경 보스 이벤트(발 → 손 → 몸 → 얼굴) → 옷장 뒤 벽 구멍 → 엔딩. Buddy 동행 8상태. Stage Manager(짓기 · 내리기 · dispose · 미리 짓기). 캐릭터 · 환경 GLB를 `assets/characters/…` · `assets/environment/…`에 넣기만 하면 코드 수정 없이 교체(PlayerRoot / BuddyRoot = 겉모습과 판정 분리). 튜토리얼 · 힌트의 조작 안내를 방향키로 |
 | v2.6.1 | **v2.6 테스트에서 찾은 버그 두 개 수정** — 서고 꼭대기 선반의 상자가 앞쪽 통로를 10 cm만 남겨 A.A. · Locke · Rex가 위쪽 길(조각 5)로 지나가지 못하던 문제(v2.2부터 있던 것), 스튜디오에서 Bully가 들어오는 시간이 실제 시계 기준이라 일시정지하거나 빨리 지나가면 Bully가 아예 안 들어오던 문제(게임 시간 기준으로). 5인 모두 Bully에게 쫓기며 스튜디오를 빠져나가고, A.A. · Locke · Rex도 서고 위쪽 길로 조각 4–6을 모두 모은다 |
@@ -28,9 +28,34 @@
 
 v1.1(2D Canvas 전체 슬라이스)은 `versions/ODD_HAUS_LITTLE_SHADOWS_v1.1.html`에서 그대로 플레이할 수 있습니다.
 
-## v2.9에서 바뀐 것 (최종 GLB 4개 · 비율 확인 모드 · 카메라 · 조명 · 정직 규칙)
+## 디자인 리뷰 진행 중 (게임 미반영) — Vin · Buddy · Bully · Lounge 다시 만들기
 
-**완료 (저장소에 실제 GLB 파일이 있다)** — 상태표: [docs/ASSET_STATUS.md](docs/ASSET_STATUS.md)
+v2.9의 GLB 4개는 Three.js 기본 도형(구 · 상자 · 원기둥 · 캡슐 · 회전체)을 조립한 것이라 **최종 아트로 인정하지 않는다 — PROTOTYPE**. 기준은 "GLB가 있다"가 아니라 "조형이 콘셉트 아트에 가까운가"다 ([CLAUDE.md](CLAUDE.md) 2-2).
+
+새 리뷰 후보는 Blender(bpy)로 조형했다 — SDF 스컬프트 → Quadriflow 리토폴로지 → 스컬프트 브러시 · 천 시뮬레이션 → 표면 위치에 그린 텍스처 ([tools/blender/](tools/blender/)). 사람이 손으로 스컬프트한 것이 아니라 **스크립트로 조형 과정을 거친 것**이고, 저장소에 콘셉트 이미지 파일이 없어 문서의 설명과 이전 시트 기준으로 맞췄다.
+
+**▶ 리뷰 페이지: https://gjswls315-collab.github.io/ODD-HAUS-LITTLE-SHADOWS/review/** — 안개 · 어둠 · 후처리 없음. 중립 스튜디오 조명 / 게임 조명, 카메라 앞 · 옆 · 뒤 · 3/4 · 클로즈업 · 회전, v2.9 PROTOTYPE과 나란히 비교, 형태만(점토) · 토폴로지(와이어) 보기.
+
+| 대상 | 리뷰 후보 파일 | 크기 | 삼각형 | 실측 | 상태 |
+|---|---|---|---|---|---|
+| Vin | `assets/review/chr_vin_review.glb` | 4.56 MB (4,777,436 B) | 124,848 | 키 25.5 cm (기준 24) | PROTOTYPE · 승인 전 |
+| Buddy | `assets/review/npc_buddy_review.glb` | 4.47 MB (4,687,548 B) | 120,324 | 머리까지 56 cm (어깨 기준 33) | PROTOTYPE · 승인 전 |
+| Bully | `assets/review/enemy_bully_review.glb` | 8.88 MB (9,315,472 B) | 248,366 | 키 152.6 cm (기준 150) | PROTOTYPE · 승인 전 |
+| Lounge 구역 | `assets/review/env_lounge_section_review.glb` | 8.39 MB (8,801,756 B) | 201,468 | 2.9 × 1.9 × 2.4 m | PROTOTYPE · 승인 전 |
+
+- **게임은 바뀌지 않았다** — `index.html`(= v2.9)은 이 파일들을 읽지 않는다. 이동 · 점프 · 충돌 · 퍼즐 · AI · 스테이지 배치는 그대로.
+- **승인 → 게임 반영 순서** — 사용자가 리뷰 페이지에서 보고 승인하면 `assets/APPROVED.json`에 기록하고, 그때 게임 경로(`assets/characters/…` · `assets/environment/…`)로 옮겨 새 버전 파일을 만든다. 승인 전에는 모두 PROTOTYPE. 상태표: [docs/ASSET_STATUS.md](docs/ASSET_STATUS.md).
+- **알려진 한계 (승인 판단에 참고)**
+  - 면 수가 많다(캐릭터 12만–25만 삼각형) — 승인 뒤 게임용으로 줄인다.
+  - Buddy: 털 다발 층(겹 다발 조형)이 다리 · 가슴에서 어두운 물결 줄로 보이고, 가까이서는 봉제 인형 같은 곳이 있다.
+  - Bully: 얼굴(특히 입 · 아래턱)이 아직 약간 어색하다. 앞머리는 머리 덩어리와 따로 붙인 다발이라 아주 가까이서는 끝이 뾰족하게 보인다.
+  - Lounge: 방 전체가 아니라 소파 · 사이드 테이블 · 램프 · 창 · 커튼 · 러그가 있는 한 구역이다.
+
+## v2.9에서 바뀐 것 (PROTOTYPE GLB 4개 · 비율 확인 모드 · 카메라 · 조명 · 정직 규칙)
+
+> 정정: 아래 GLB 4개는 `tools/glb`가 Three.js 기본 도형(구 · 상자 · 원기둥 · 캡슐 · 회전체)을 조립해 만든 것이라 **최종 아트가 아니다 — PROTOTYPE**. 게임은 지금 이 파일을 쓰고 있다. 새 기준과 리뷰 후보는 위 '디자인 리뷰' 절.
+
+**PROTOTYPE (저장소에 실제 GLB 파일이 있고 게임이 쓰지만, 최종 아트 아님)** — 상태표: [docs/ASSET_STATUS.md](docs/ASSET_STATUS.md)
 
 | 대상 | 파일 | 크기 | 게임 실측 |
 |---|---|---|---|

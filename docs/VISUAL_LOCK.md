@@ -148,9 +148,9 @@
 - **드로우콜** — 같은 재질의 고정 부품(Bully 머리카락 · 주근깨, Mr. ODD 머리 · 머리카락, Rex 왕관 장식)을 메시 하나로 합쳤다: Bully 153 → 109, Mr. ODD 118 → 53, Rex 71 → 54. 공명 투시(x-ray) 복제 메시는 쓸 때만 그린다.
 - 화면 명암 비율(같은 측정): 04 DJ BOOTH 0.86–0.89 → **0.78**(벽 · 바닥을 조금 밝게, 왼쪽 벽 · 선반 앞 보조광, 노출 2.25). 나머지는 그대로(서고 0.70–0.73 · 추격 복도 0.72 · 스튜디오 0.80 · 컨트롤 룸 0.64 · 테라스 0.78–0.79 · 잠긴 방 0.64–0.83).
 
-## v2.9 갱신 — 최종 GLB · 카메라 구도 · 그림자 색
+## v2.9 갱신 — PROTOTYPE GLB · 카메라 구도 · 그림자 색
 
-- **최종 GLB(저장소에 실제 파일)**: Vin `assets/characters/vin/chr_vin.glb` · Buddy `assets/characters/buddy/npc_buddy.glb` · Bully `assets/characters/bully/enemy_bully.glb` · 거실 `assets/environment/lounge/env_lounge.glb`. 나머지(Picker · A.A. · Locke · Rex · Mr. ODD · 다른 방 5개)는 PLACEHOLDER — 미완성. 상태표: [ASSET_STATUS.md](ASSET_STATUS.md).
+- **PROTOTYPE GLB(저장소에 실제 파일 — `tools/glb` 도형 조립이라 최종 아트 아님, 정정은 [CLAUDE.md](../CLAUDE.md) 2-2)**: Vin `assets/characters/vin/chr_vin.glb` · Buddy `assets/characters/buddy/npc_buddy.glb` · Bully `assets/characters/bully/enemy_bully.glb` · 거실 `assets/environment/lounge/env_lounge.glb`. 나머지(Picker · A.A. · Locke · Rex · Mr. ODD · 다른 방 5개)는 PLACEHOLDER — 미완성. 상태표: [ASSET_STATUS.md](ASSET_STATUS.md).
 - **Bully 비율** — 키 150 cm 인간 소년: 골반 높이 0.74 m(키의 49%) · 어깨 1.17 m · 머리 높이 약 26 cm(키의 1/5.8, 살짝 크게). v2.8의 큰 머리 마스코트 비율(머리 = 키의 1/4)은 버렸다. 게임 리그도 같은 비율(정강이 · 넓적다리 길이, 어깨 폭 0.30 m, 앉은 자세의 발은 스툴 발받침 쪽).
 - **카메라 구도**
   - 가는 쪽 리드: 화면 폭의 10%(움직일 때) · 7.5%(멈췄을 때) — 오른쪽으로 가면 플레이어는 왼쪽 약 40%. 스프링 지연(속도 × 2/k)만큼 앞당긴다.

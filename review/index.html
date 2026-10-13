@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ODD HAUS 디자인 리뷰</title>
+<meta name="description" content="게임에 넣기 전, 리뷰 후보 모델(Vin · Buddy · Bully · Lounge 구역)을 안개 · 어둠 · 후처리 없이 중립 스튜디오 조명과 게임 조명으로 확인하는 페이지">
+<style>
+:root { --bg: #0d0f14; --panel: rgba(18, 20, 26, .9); --line: rgba(255, 255, 255, .12); --fg: #efe8dc; --dim: #a59f95; --accent: #e8b44a; --warn: #ff8a6a; --ok: #8fdc8f; color-scheme: dark; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); font: 13px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; overflow: hidden; }
+canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+#ui { position: fixed; left: 12px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); z-index: 5; width: min(440px, calc(100vw - 24px)); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; box-sizing: border-box; }
+#ui h1 { font-size: 14px; margin: 0 0 2px; letter-spacing: .05em; display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+#ui h1 small { color: var(--dim); font-weight: 400; letter-spacing: 0; font-size: 11px; }
+#ui .row { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; align-items: center; }
+#ui .lab { color: var(--dim); font-size: 11px; min-width: 52px; }
+#ui button { font: 12px system-ui, sans-serif; background: #262a33; color: var(--fg); border: 1px solid #424754; border-radius: 5px; padding: 4px 9px; cursor: pointer; }
+#ui button:hover { background: #313642; }
+#ui button.on { background: var(--accent); color: #1b1408; border-color: var(--accent); font-weight: 600; }
+#info { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); font-size: 12px; }
+#info b { color: var(--fg); }
+#info .st { color: var(--warn); font-weight: 600; }
+#info .k { color: var(--dim); }
+#fold { padding: 2px 8px !important; }
+#ui.min > :not(h1) { display: none; }
+.tag { position: fixed; z-index: 4; transform: translate(-50%, -100%); pointer-events: none; background: rgba(14, 16, 22, .85); border: 1px solid var(--line); border-radius: 5px; padding: 3px 7px; font-size: 11px; white-space: nowrap; text-align: center; }
+.tag b { font-size: 12px; }
+.tag .p { color: var(--warn); }
+.tag .o { color: var(--dim); }
+#load { position: fixed; inset: 0; display: grid; place-items: center; color: var(--dim); font-size: 13px; pointer-events: none; }
+</style>
+</head>
+<body>
+<div id="load">모델 불러오는 중…</div>
+<div id="ui">
+  <h1><span>ODD HAUS 디자인 리뷰 <small>게임과 분리된 확인용 장면</small></span><button id="fold">접기</button></h1>
+  <div class="row"><span class="lab">대상</span><span id="subj"></span></div>
+  <div class="row"><span class="lab">카메라</span>
+    <button data-v="front">앞</button><button data-v="side">옆</button><button data-v="back">뒤</button><button data-v="q34">3/4</button><button data-v="close">클로즈업</button><button data-v="spin">회전</button></div>
+  <div class="row"><span class="lab">조명</span><button data-l="studio" class="on">중립 스튜디오</button><button data-l="game">게임 조명</button></div>
+  <div class="row"><span class="lab">보기</span><button data-x="compare">v2.9 PROTOTYPE과 비교</button><button data-x="clay">형태만(점토)</button><button data-x="wire">토폴로지(와이어)</button></div>
+  <div id="info"></div>
+</div>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+// 리뷰 후보 = 아직 승인 전 PROTOTYPE. 게임(index.html)은 이 파일들을 읽지 않는다.
+const SUBJECTS = [
+  { id: 'vin', name: 'Vin', file: '../assets/review/chr_vin_review.glb', old: '../assets/characters/vin/chr_vin.glb', h: .25, x: 0, ref: '키 24 cm' },
+  { id: 'buddy', name: 'Buddy', file: '../assets/review/npc_buddy_review.glb', old: '../assets/characters/buddy/npc_buddy.glb', h: .58, x: .9, ref: '어깨 33 cm' },
+  { id: 'bully', name: 'Bully', file: '../assets/review/enemy_bully_review.glb', old: '../assets/characters/bully/enemy_bully.glb', h: 1.55, x: 2.3, ref: '키 150 cm' },
+  { id: 'lounge', name: 'Lounge 구역', file: '../assets/review/env_lounge_section_review.glb', old: null, h: 1.6, x: 5.2, ref: '실제 크기' },
+];
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.prepend(renderer.domElement);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(32, innerWidth / innerHeight, .005, 60);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.dampingFactor = .12;
+const pmrem = new THREE.PMREMGenerator(renderer);
+const envTex = pmrem.fromScene(new RoomEnvironment(), .04).texture;
+
+// 바닥 (그림자 받기)
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.MeshStandardMaterial({ color: 0x8c8b88, roughness: .92, envMapIntensity: .5 }));
+floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
+
+// 조명 두 벌
+const L = {
+  hemi: new THREE.HemisphereLight(0xffffff, 0x404040, .35),
+  key: new THREE.DirectionalLight(0xfff4e6, 2.4), fill: new THREE.DirectionalLight(0xe6eeff, .9), rim: new THREE.DirectionalLight(0xffffff, 1.6),
+  lamp: new THREE.PointLight(0xffb36b, 0, 0, 2), grim: new THREE.DirectionalLight(0x7f9cff, 0),
+};
+for (const k in L) scene.add(L[k]);
+L.key.castShadow = true; L.key.shadow.mapSize.set(2048, 2048); L.key.shadow.bias = -.0004; L.key.shadow.normalBias = .01;
+L.lamp.castShadow = true; L.lamp.shadow.mapSize.set(1024, 1024); L.lamp.shadow.bias = -.001;
+let mode = 'studio';
+function setLight(m) {
+  mode = m;
+  const st = m === 'studio';
+  scene.background = new THREE.Color(st ? 0x9a9b9e : 0x0e1118);
+  scene.environment = envTex;
+  for (const m of allMats) m.envMapIntensity = st ? 1.0 : .12;          // r160: 장면 전체 환경광 세기 대신 재질마다
+  floor.material.color.set(st ? 0x8c8b88 : 0x1d1915);
+  L.hemi.color.set(st ? 0xffffff : 0x50607e); L.hemi.groundColor.set(st ? 0x404040 : 0x120e0b); L.hemi.intensity = st ? .35 : .35;
+  L.key.intensity = st ? 2.4 : 0; L.fill.intensity = st ? .9 : 0; L.rim.intensity = st ? 1.6 : 0;
+  L.lamp.intensity = st ? 0 : 1; L.grim.intensity = st ? 0 : 1.4;
+  renderer.toneMappingExposure = st ? 1.0 : 1.15;
+  frameLights();
+  document.querySelectorAll('[data-l]').forEach(b => b.classList.toggle('on', b.dataset.l === m));
+}
+
+// 불러오기
+const loader = new GLTFLoader();
+const items = {};
+function stats(root) {
+  let tris = 0; const tex = new Set(), mats = new Set();
+  root.traverse(o => {
+    if (!o.isMesh) return;
+    const g = o.geometry; tris += (g.index ? g.index.count : g.attributes.position.count) / 3;
+    for (const m of [].concat(o.material)) { mats.add(m); for (const k of ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap', 'emissiveMap', 'clearcoatMap', 'sheenColorMap']) if (m[k]) tex.add(m[k]); }
+  });
+  return { tris: Math.round(tris), tex: tex.size, mats: mats.size };
+}
+async function load(url) {
+  try {
+    const r = await fetch(url, { cache: 'no-cache' }); if (!r.ok) return null;
+    const buf = await r.arrayBuffer(); const g = await loader.parseAsync(buf, url.replace(/[^/]*$/, ''));
+    g.scene.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; o.frustumCulled = false; for (const m of [].concat(o.material)) allMats.add(m); } });
+    return { root: g.scene, bytes: buf.byteLength };
+  } catch (e) { console.warn(url, e); return null; }
+}
+const center = (root) => { const b = new THREE.Box3().setFromObject(root); return b; };
+const allMats = new Set();
+await Promise.all(SUBJECTS.map(async S => {
+  const it = items[S.id] = { S, cand: await load(S.file), old: S.old ? await load(S.old) : null };
+  if (it.cand) {
+    const r = it.cand.root; scene.add(r);
+    const b = center(r); r.position.x = S.x - (b.min.x + b.max.x) / 2; if (S.id === 'lounge') r.position.z = -(b.min.z + b.max.z) / 2 - .2;
+    it.box = new THREE.Box3().setFromObject(r); it.st = stats(r);
+  }
+  if (it.old) { const r = it.old.root; r.visible = false; scene.add(r); it.oldSt = stats(r); }
+}));
+document.getElementById('load').remove();
+
+// 이름표
+const tags = {};
+for (const S of SUBJECTS) {
+  const el = document.createElement('div'); el.className = 'tag'; document.body.appendChild(el); tags[S.id] = el;
+}
+function tagText(it, old) {
+  const S = it.S;
+  if (old) return `<b>${S.name}</b> <span class="o">v2.9 PROTOTYPE (지금 게임)</span>`;
+  if (!it.cand) return `<b>${S.name}</b> <span class="o">리뷰 후보 없음</span>`;
+  return `<b>${S.name}</b> <span class="p">PROTOTYPE · 리뷰 후보</span>`;
+}
+const oldTags = {};
+for (const S of SUBJECTS) if (S.old) { const el = document.createElement('div'); el.className = 'tag'; document.body.appendChild(el); oldTags[S.id] = el; }
+
+// 대상 버튼
+let cur = 'vin', view = 'q34', spin = false, compare = false, clay = false, wire = false;
+const subj = document.getElementById('subj');
+for (const S of SUBJECTS) {
+  const b = document.createElement('button'); b.textContent = S.name; b.dataset.s = S.id; subj.appendChild(b);
+}
+function info() {
+  const it = items[cur], S = it.S, kb = n => (n / 1048576).toFixed(2) + ' MB';
+  const c = it.cand ? `<span class="k">파일</span> <code>${S.file.replace('../', '')}</code> · ${kb(it.cand.bytes)}<br><span class="k">삼각형</span> ${it.st.tris.toLocaleString()} · <span class="k">재질</span> ${it.st.mats} · <span class="k">텍스처</span> ${it.st.tex} · <span class="k">기준</span> ${S.ref} · <span class="k">높이</span> ${((it.box.max.y - it.box.min.y) * 100).toFixed(1)} cm`
+                    : '<span class="k">아직 리뷰 후보 파일이 없다.</span>';
+  const o = it.old ? `<br><span class="k">비교: 지금 게임</span> <code>${S.old.replace('../', '')}</code> · ${kb(it.old.bytes)} · ${it.oldSt.tris.toLocaleString()} 삼각형` : '';
+  document.getElementById('info').innerHTML = `<b>${S.name}</b> — <span class="st">PROTOTYPE (승인 전 · 게임에 넣지 않음)</span><br>${c}${o}`;
+  document.querySelectorAll('[data-s]').forEach(b => b.classList.toggle('on', b.dataset.s === cur));
+}
+
+// 카메라
+const ANG = { front: 0, side: Math.PI / 2, back: Math.PI, q34: .62, close: .35 };
+function focus() {
+  const it = items[cur]; const S = it.S;
+  const b = it.box || new THREE.Box3(new THREE.Vector3(S.x - .2, 0, -.2), new THREE.Vector3(S.x + .2, S.h, .2));
+  const c = b.getCenter(new THREE.Vector3()), sz = b.getSize(new THREE.Vector3());
+  let h = Math.max(sz.y, sz.x * .75, sz.z * .75) * 1.18, ty = c.y;
+  if (compare && it.old) { h *= 1.25; }
+  if (view === 'close') { h = sz.y * (S.id === 'lounge' ? .3 : S.id === 'bully' ? .26 : .5); ty = b.max.y - h * (S.id === 'lounge' ? 1.6 : .55); }
+  const d = h / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)));
+  const a = ANG[view] ?? .62;
+  const tx = compare && it.old ? c.x + (sz.x * .7 + .05) * .5 : c.x;
+  controls.target.set(tx, ty, c.z);
+  camera.position.set(tx + Math.sin(a) * d, ty + h * .08, c.z + Math.cos(a) * d);
+  camera.near = d / 100; camera.far = d * 30; camera.updateProjectionMatrix();
+  frameLights();
+  document.querySelectorAll('[data-v]').forEach(bt => bt.classList.toggle('on', bt.dataset.v === view || (bt.dataset.v === 'spin' && spin)));
+}
+function frameLights() {
+  const it = items[cur]; const b = it.box; if (!b) return;
+  const c = b.getCenter(new THREE.Vector3()), r = Math.max(b.getSize(new THREE.Vector3()).length() * .8, .3);
+  L.key.position.set(c.x - r * 1.2, c.y + r * 1.8, c.z + r * 1.6); L.key.target.position.copy(c); L.key.target.updateMatrixWorld();
+  const sc = L.key.shadow.camera; sc.left = sc.bottom = -r * 1.6; sc.right = sc.top = r * 1.6; sc.near = .01; sc.far = r * 8; sc.updateProjectionMatrix();
+  L.fill.position.set(c.x + r * 1.8, c.y + r * .6, c.z + r * 1.2);
+  L.rim.position.set(c.x + r * .4, c.y + r * 1.4, c.z - r * 2.0);
+  L.lamp.position.set(c.x - r * .9, c.y + r * .7, c.z + r * .8); L.lamp.distance = 0; L.lamp.intensity = mode === 'game' ? 6 * r * r : 0;
+  L.grim.position.set(c.x + r * .6, c.y + r * 1.0, c.z - r * 1.8);
+}
+
+// 비교 · 점토 · 와이어
+const clayMat = new THREE.MeshStandardMaterial({ color: 0xb9b3a8, roughness: .75 });
+const store = new Map();
+function applyView() {
+  for (const id in items) {
+    const it = items[id];
+    if (it.old) {
+      it.old.root.visible = compare && id === cur && !!it.cand;
+      if (it.old.root.visible) { const b = it.box, sz = b.getSize(new THREE.Vector3()); it.old.root.position.set(b.max.x + sz.x * .4 + .05 - (it.S.id === 'vin' ? 0 : 0), 0, 0); }
+    }
+    for (const r of [it.cand?.root, it.old?.root]) {
+      if (!r) continue;
+      r.traverse(o => {
+        if (!o.isMesh) return;
+        if (!store.has(o)) store.set(o, o.material);
+        const orig = store.get(o);
+        if (clay) { o.material = clayMat; }
+        else { o.material = orig; }
+        for (const m of [].concat(o.material)) m.wireframe = wire;
+      });
+    }
+  }
+  clayMat.wireframe = wire;
+  document.querySelectorAll('[data-x]').forEach(b => b.classList.toggle('on', ({ compare, clay, wire })[b.dataset.x]));
+}
+
+document.getElementById('ui').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.id === 'fold') { const m = document.getElementById('ui').classList.toggle('min'); b.textContent = m ? '펴기' : '접기'; return; }
+  if (b.dataset.s) { cur = b.dataset.s; info(); applyView(); focus(); }
+  if (b.dataset.v) { if (b.dataset.v === 'spin') spin = !spin; else view = b.dataset.v; focus(); }
+  if (b.dataset.l) setLight(b.dataset.l);
+  if (b.dataset.x) { if (b.dataset.x === 'compare') compare = !compare; if (b.dataset.x === 'clay') clay = !clay; if (b.dataset.x === 'wire') wire = !wire; applyView(); focus(); }
+});
+addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); });
+
+const v = new THREE.Vector3();
+function placeTag(el, root, html, show) {
+  if (!root || !show) { el.style.display = 'none'; return; }
+  const b = new THREE.Box3().setFromObject(root); v.set((b.min.x + b.max.x) / 2, b.max.y, (b.min.z + b.max.z) / 2).project(camera);
+  const on = v.z < 1 && Math.abs(v.x) < 1.1 && Math.abs(v.y) < 1.1; el.style.display = on ? '' : 'none';
+  if (on) { el.style.left = ((v.x + 1) / 2 * innerWidth) + 'px'; el.style.top = ((1 - v.y) / 2 * innerHeight - 6) + 'px'; el.innerHTML = html; }
+}
+let last = performance.now();
+renderer.setAnimationLoop(t => {
+  const dt = Math.min(.05, (t - last) / 1000); last = t;
+  if (spin) { const o = controls.target, p = camera.position; const a = dt * .5, x = p.x - o.x, z = p.z - o.z; p.x = o.x + x * Math.cos(a) + z * Math.sin(a); p.z = o.z - x * Math.sin(a) + z * Math.cos(a); }
+  controls.update(); renderer.render(scene, camera);
+  for (const id in items) {
+    const it = items[id];
+    placeTag(tags[id], it.cand?.root, tagText(it, false), id === cur || view !== 'close');
+    if (oldTags[id]) placeTag(oldTags[id], it.old?.root, tagText(it, true), it.old?.root.visible);
+  }
+});
+window.REVIEW = { items, set: (c, v_, l, x) => { cur = c; view = v_; if (l) setLight(l); compare = !!(x && x.compare); clay = !!(x && x.clay); wire = !!(x && x.wire); info(); applyView(); focus(); }, ready: true };
+setLight('studio'); info(); applyView(); focus();
+</script>
+</body>
+</html>
