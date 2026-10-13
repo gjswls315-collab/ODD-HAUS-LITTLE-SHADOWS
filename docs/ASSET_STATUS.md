@@ -8,20 +8,20 @@
 
 | 캐릭터 | 지금 게임 (게임 경로) | 크기 · 삼각형 | 리뷰 후보 (assets/review) | 크기 · 삼각형 | 기준 | 게임 실측 |
 |---|---|---|---|---|---|---|
-| Vin | PROTOTYPE (게임 사용 중 · 승인 전)<br>`assets/characters/vin/chr_vin.glb` | 2.19 MB · 65,196 | PROTOTYPE (리뷰 후보 · 게임 미사용 · 승인 전)<br>`assets/review/chr_vin_review.glb` | 4.56 MB · 124,848 | 24 cm | 파일 25.8 · 화면 25.5 cm |
+| Vin | PROTOTYPE (게임 사용 중 · 승인 전)<br>`assets/characters/vin/chr_vin.glb` | 2.19 MB · 65,196 | PROTOTYPE (리뷰 후보 · 게임 미사용 · 승인 전)<br>`assets/review/chr_vin_review.glb` | 4.62 MB · 123,320 | 24 cm | 파일 25.8 · 화면 25.5 cm |
 | Picker | 미완성 (PLACEHOLDER)<br>`assets/characters/picker/chr_picker.glb` — 없음 | — | — | — | 23 cm | PLACEHOLDER 25.7 cm |
 | A.A. | 미완성 (PLACEHOLDER)<br>`assets/characters/aa/chr_aa.glb` — 없음 | — | — | — | 28 cm | PLACEHOLDER 35.1 cm |
 | Locke | 미완성 (PLACEHOLDER)<br>`assets/characters/locke/chr_locke.glb` — 없음 | — | — | — | 30 cm | PLACEHOLDER 33.2 cm |
 | Rex | 미완성 (PLACEHOLDER)<br>`assets/characters/rex/chr_rex.glb` — 없음 | — | — | — | 35 cm | PLACEHOLDER 38.2 cm |
-| Buddy | PROTOTYPE (게임 사용 중 · 승인 전)<br>`assets/characters/buddy/npc_buddy.glb` | 3.68 MB · 105,686 | PROTOTYPE (리뷰 후보 · 게임 미사용 · 승인 전)<br>`assets/review/npc_buddy_review.glb` | 4.47 MB · 120,324 | 어깨 33 cm | 파일 30.2 · 화면 29.2 cm |
-| Bully | PROTOTYPE (게임 사용 중 · 승인 전)<br>`assets/characters/bully/enemy_bully.glb` | 3.15 MB · 83,166 | PROTOTYPE (리뷰 후보 · 게임 미사용 · 승인 전)<br>`assets/review/enemy_bully_review.glb` | 8.88 MB · 248,366 | 150 cm | 파일 153.5 · 화면 153.5 cm |
+| Buddy | PROTOTYPE (게임 사용 중 · 승인 전)<br>`assets/characters/buddy/npc_buddy.glb` | 3.68 MB · 105,686 | PROTOTYPE (리뷰 후보 · 게임 미사용 · 승인 전)<br>`assets/review/npc_buddy_review.glb` | 4.19 MB · 118,804 | 어깨 33 cm | 파일 30.2 · 화면 29.2 cm |
+| Bully | PROTOTYPE (게임 사용 중 · 승인 전)<br>`assets/characters/bully/enemy_bully.glb` | 3.15 MB · 83,166 | PROTOTYPE (리뷰 후보 · 게임 미사용 · 승인 전)<br>`assets/review/enemy_bully_review.glb` | 10.12 MB · 252,452 | 150 cm | 파일 153.5 · 화면 153.5 cm |
 | Mr. ODD | 미완성 (PLACEHOLDER)<br>`assets/characters/mr-odd/boss_mr_odd.glb` — 없음 | — | — | — | 180 cm | PLACEHOLDER 201.1 cm |
 
 ## 환경
 
 | 스테이지 | 지금 게임 (게임 경로) | 크기 · 삼각형 | 리뷰 후보 (assets/review) | 크기 · 삼각형 |
 |---|---|---|---|---|
-| 01 LOUNGE (거실 방) | PROTOTYPE (게임 사용 중 · 승인 전)<br>`assets/environment/lounge/env_lounge.glb` | 5.22 MB · 113,310 | PROTOTYPE (리뷰 후보 · 게임 미사용 · 승인 전)<br>`assets/review/env_lounge_section_review.glb` | 8.39 MB · 201,468 |
+| 01 LOUNGE (거실 방) | PROTOTYPE (게임 사용 중 · 승인 전)<br>`assets/environment/lounge/env_lounge.glb` | 5.22 MB · 113,310 | PROTOTYPE (리뷰 후보 · 게임 미사용 · 승인 전)<br>`assets/review/env_lounge_section_review.glb` | 11.57 MB · 287,706 |
 | 02 LP LIBRARY | 미완성 (코드 그레이박스 · PLACEHOLDER)<br>`assets/environment/lp-library/env_lp_library.glb` — 없음 | — | — | — |
 | 03 STUDIO | 미완성 (코드 그레이박스 · PLACEHOLDER)<br>`assets/environment/studio/env_studio.glb` — 없음 | — | — | — |
 | 04 DJ BOOTH | 미완성 (코드 그레이박스 · PLACEHOLDER)<br>`assets/environment/dj-booth/env_dj_booth.glb` — 없음 | — | — | — |

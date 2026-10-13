@@ -31,8 +31,8 @@ def profile():
     hole = .0035
     def hf(r):                                 # 앞면 두께(중심면에서 앞으로)
         h = .0050
-        if r < .016: h = .0053                 # 가운데(눈 뒤) 매끈한 부분 — 눈에 가려 입처럼 보이지 않게 작게
-        elif r < .020: h = .0050 - .0002 * math.sin((r - .016) / .004 * math.pi)   # 런아웃 골
+        if r < .0425: h = .0054                # 앞 라벨 단 (빨간 종이 라벨 · 눈이 그 위에 얹힌다 — 콘셉트 시트)
+        elif r < .0465: h = .0050 - .0002 * math.sin((r - .0425) / .004 * math.pi)  # 런아웃 골
         bead = math.exp(-((r - .0772) / .0016) ** 2) * .0011   # 바깥 비드
         return h + bead
     def hb(r):
@@ -42,7 +42,7 @@ def profile():
         bead = math.exp(-((r - .0772) / .0016) ** 2) * .0011
         return h + bead
     # 앞면: 가운데 → 바깥 (구멍은 뒷면에서만 3.8 mm 깊이 — 앞에서는 눈 사이가 매끈하다)
-    rs = list(np.linspace(hole, .046, 20)) + list(np.linspace(.0478, .0742, 7)) + list(np.linspace(.0754, .0786, 4))
+    rs = list(np.linspace(hole, .0420, 18)) + [.0428, .0438, .0452, .0465] + list(np.linspace(.0478, .0742, 7)) + list(np.linspace(.0754, .0786, 4))
     for r in [0.0, .0018] + rs:
         pts.append((r, -hf(r)))
     # 둥근 가장자리: r .0786 → .0800 반원 (앞 → 뒤)
@@ -94,31 +94,16 @@ def _warp(a):
     return a
 odd.warp(body, _warp)
 
-# ---------- 눈구멍: 앞면에 타원으로 파고 둘레를 살짝 돋운다 ----------
-EYE = [RP('eye0'), RP('eye1')]
-EA = (.0215, .0275)            # 눈알 반지름 (가로 · 세로)
-def socket(o):
-    a = odd.co(o)
-    rel = a - np.array(C)
-    front = rel[:, 1] < 0
-    for e in EYE:
-        dx = (a[:, 0] - e.x) / (EA[0] * 1.08); dz = (a[:, 2] - e.z) / (EA[1] * 1.06)
-        d = np.sqrt(dx * dx + dz * dz)
-        dip = np.where(d < 1, (1 - d * d) ** .7 * .0026, 0)                       # 안으로 2.6 mm
-        rim = np.exp(-((d - 1.08) / .12) ** 2) * .00055                           # 둘레 돋움 0.55 mm
-        a[:, 1] += np.where(front, dip - rim, 0)
-    odd.set_co(o, a)
-socket(body)
-_a = odd.co(body); _mid = Vector(((EYE[0].x + EYE[1].x) / 2, C.y - .004, EYE[0].z + .012))
-odd.smooth(body, 6, .5, mask=odd.falloff(np.linalg.norm(_a - np.array(_mid), axis=1), .014) * (_a[:, 1] < C.y))
-_low = Vector((C.x, C.y - .004, C.z + .004)); _a = odd.co(body)
-odd.smooth(body, 8, .5, mask=odd.falloff(np.linalg.norm(_a - np.array(_low), axis=1), .011) * (_a[:, 1] < C.y))
+# ---------- 눈 자리: 콘셉트 시트처럼 두 눈이 거의 닿게 가운데로 모은다 (리그의 눈 높이 · 가운데는 그대로) ----------
+_E0, _E1 = RP('eye0'), RP('eye1'); _xm = (_E0.x + _E1.x) / 2
+EA = (.0150, .0265)            # 눈알 반지름 (가로 · 세로) — 세로로 긴 알약 모양
+EYE = [Vector((_xm - .0162, _E0.y, _E0.z)), Vector((_xm + .0162, _E1.y, _E1.z))]
 
 # =====================================================================================
-# 2. 눈: 눈알(앞이 납작한 타원 + 각막 볼록) · 위 눈꺼풀(검은 비닐 껍질, 두꺼운 테) · 아래 테
+# 2. 눈: 라벨 위에 얹힌 흰 유광 구슬(세로로 긴 타원 · 앞이 둥글게 볼록) — 눈꺼풀 없음 (콘셉트 시트)
 # =====================================================================================
-def eyeball(name, c, ax, ay, depth):
-    """구를 펴서 만든 쿼드 볼 → 타원 · 뒤 납작 · 앞 각막 볼록을 직접 조형."""
+def eyeball(name, c, ax, ay, depth, tilt=0.0):
+    """구를 펴서 만든 쿼드 볼 → 타원 · 뒤 납작 · 앞 볼록을 직접 조형. tilt: 위가 바깥으로 기우는 각도(라디안)."""
     bm = bmesh.new(); bmesh.ops.create_cube(bm, size=2)
     bmesh.ops.subdivide_edges(bm, edges=bm.edges[:], cuts=7, use_grid_fill=True)
     for v in bm.verts:
@@ -127,37 +112,18 @@ def eyeball(name, c, ax, ay, depth):
     o = bpy.data.objects.new(name, me); odd.link(o); me.shade_smooth()
     a = odd.co(o)
     x, y, z = a[:, 0], a[:, 1], a[:, 2]          # y < 0 앞
-    yy = np.where(y < 0, y * depth * (1 + .10 * np.exp(-((x * x + (z + .15) ** 2) / .18))), y * depth * .45)   # 앞 볼록 · 뒤 납작
-    a = np.stack([x * ax, yy, z * ay], 1) + np.array(c)
+    yy = np.where(y < 0, y * depth * (1 + .06 * np.exp(-((x * x + z * z) / .25))), y * depth * .45)   # 앞 볼록 · 뒤 납작
+    X, Z = x * ax, z * ay; ct, st = math.cos(tilt), math.sin(tilt)
+    a = np.stack([X * ct - Z * st, yy, X * st + Z * ct], 1) + np.array(c)
     odd.set_co(o, a)
     odd.subsurf(o, 1)
     return o
 
 eyes = []; eye_c = {}
 for i, e in enumerate(EYE):
-    c = Vector((e.x, C.y - .0042, e.z))
-    eyes.append(eyeball(f'Vin_Eye{i}', c, EA[0], EA[1], .0105)); eye_c[eyes[-1].name] = c
+    c = Vector((e.x, C.y - .0062, e.z))                                    # 라벨 면(앞 5.4 mm) 바로 앞 — 앞으로 약 1 cm 볼록
+    eyes.append(eyeball(f'Vin_Eye{i}', c, EA[0], EA[1], .0098, tilt=(.10 if i == 0 else -.10))); eye_c[eyes[-1].name] = c
 
-def eyelid(name, eye, side):
-    """위 눈꺼풀: 눈알 위쪽 껍질을 평면으로 깨끗하게 잘라(기울어진 눈꺼풀 선) 0.8 mm 띄우고, 두께와 둥근 테를 준다."""
-    me = eye.data.copy(); o = bpy.data.objects.new(name, me); odd.link(o)
-    c = Vector(np.mean(odd.co(o), 0)); c.y = eye_c[eye.name].y
-    bm = bmesh.new(); bm.from_mesh(me)
-    tilt = .20 * side                                            # 바깥쪽이 조금 내려온다
-    pc = c + Vector((0, 0, EA[1] * .36))
-    pn = Vector((tilt * EA[1] / EA[0], 0, 1)).normalized()
-    g = bmesh.ops.bisect_plane(bm, geom=bm.verts[:] + bm.edges[:] + bm.faces[:], plane_co=pc, plane_no=pn, clear_inner=True)
-    g = bmesh.ops.bisect_plane(bm, geom=bm.verts[:] + bm.edges[:] + bm.faces[:], plane_co=c + Vector((0, .0035, 0)), plane_no=Vector((0, 1, 0)), clear_outer=True)
-    bm.to_mesh(me); bm.free()
-    a = odd.co(o); n = odd.nrm(o); odd.set_co(o, a + n * .00045)
-    odd.solidify(o, .0008, offset=1)
-    # 눈꺼풀 테: 자른 선 근처를 둥글게 부풀려 말린 테처럼
-    a = odd.co(o); d = (a - np.array(pc)) @ np.array(pn)
-    edge = np.exp(-(d / .0018) ** 2)
-    n = odd.nrm(o); odd.set_co(o, a + n * (edge * .0003)[:, None])
-    return o
-
-lids = [eyelid('Vin_Lid0', eyes[0], -1), eyelid('Vin_Lid1', eyes[1], 1)]
 
 
 # =====================================================================================
@@ -275,7 +241,6 @@ if STAGE in ('body', 'upper'):
     m = odd.Mat('clay'); m.set(Base_Color=(.08, .08, .085, 1), Roughness=.35)
     w = odd.Mat('white'); w.set(Base_Color=(.9, .9, .88, 1), Roughness=.2)
     body.data.materials.append(m.m)
-    for l in lids: l.data.materials.append(m.m)
     for e in eyes: e.data.materials.append(w.m)
     for o in arms + legs + grommets: o.data.materials.append(m.m)
     for g_, c_ in gloves: g_.data.materials.append(w.m); c_.data.materials.append(w.m)
@@ -322,8 +287,8 @@ def planar_uv(o, c, half, flip=False):
             uv.data[li].uv = (u, v)
 
 def groove_height(rr, front):
-    """반지름(m) → 홈 높이(0..1)와 홈 영역 마스크. 앞면은 눈 둘레(4.6 cm)부터, 뒷면은 라벨 밖(3.0 cm)부터."""
-    r_in = .020 if front else .030
+    """반지름(m) → 홈 높이(0..1)와 홈 영역 마스크. 앞면은 빨간 라벨 밖(4.65 cm)부터, 뒷면은 가운데 단 밖(3.0 cm)부터."""
+    r_in = .0465 if front else .030
     field = (rr > r_in) & (rr < .0732)
     gaps = np.zeros_like(rr)
     for g in (.040, .049, .058, .066):
@@ -341,7 +306,7 @@ p = S.p; rel = p - np.array(C); rr = np.hypot(rel[:, 0], rel[:, 2]); front = rel
 hF, fF, dynF = groove_height(rr, True); hB, fB, dynB = groove_height(rr, False)
 h = np.where(front, hF, hB); field = np.where(front, fF, fB); dyn = np.where(front, dynF, dynB)
 # 런아웃(라벨 쪽 매끈한 부분)의 나선 홈 한 줄 · 바깥 리드인
-lead = np.where(front, .0182, .0272)
+lead = np.where(front, .0448, .0272)
 h += np.exp(-((rr - lead - .0002 * np.sin(th)) / .00012) ** 2) * .9
 # 긁힘: 원판 면 위의 짧은 호 · 직선 (3D 거리)
 scr = np.zeros(len(p))
@@ -367,40 +332,38 @@ rough = .2 + .07 * field * (1 - dyn) + .22 * smudge * field + .35 * scr + .5 * d
 body_m = tex.material('Vin_Vinyl', TD, S.img(base), S.img(rough), tex.h2n(S.img(hgt), 2.2), coat=(.5, .12), aniso=(.55, 0.0))
 body.data.materials.append(body_m)
 
-# ---------- 뒷면 종이 라벨 (따로 붙인 종이 · 평면 UV) ----------
+# ---------- 앞면 빨간 종이 라벨 (따로 붙인 종이 · 평면 UV) — 콘셉트: 두 눈이 빨간 라벨 위에 얹혀 있다. 뒷면은 검은 비닐 그대로 ----------
+LR = .0420
 def label_mesh():
     rings = []
-    for k, r in enumerate(np.linspace(.0037, .0212, 10)):
-        rings.append([Vector((C.x + r * math.cos(TAU * j / 96), C.y + .0056 + .00006, C.z + r * math.sin(TAU * j / 96))) for j in range(96)])
+    for k, r in enumerate(np.linspace(.0006, LR, 16)):
+        rings.append([Vector((C.x + r * math.cos(TAU * j / 128), C.y - .0054 - .00006, C.z + r * math.sin(TAU * j / 128))) for j in range(128)])
     o = odd.loft('Vin_Label', rings)
     odd.warp(o, _warp)
     return o
 label = label_mesh(); odd.recalc(label)
-if np.mean(odd.nrm(label)[:, 1]) < 0: odd.recalc(label, inside=True)
-planar_uv(label, C, .0215, flip=True)
-L_ = 1024; img = Image.new('RGB', (L_, L_), (230, 216, 186)); dr = ImageDraw.Draw(img); cx = cy = L_ / 2; Rl = L_ / 2 * .0212 / .0215
-dr.ellipse([cx - Rl, cy - Rl, cx + Rl, cy + Rl], fill=(232, 219, 190))
-dr.ellipse([cx - Rl * .985, cy - Rl * .985, cx + Rl * .985, cy + Rl * .985], outline=(178, 34, 30), width=int(L_ * .028))
-dr.ellipse([cx - Rl * .9, cy - Rl * .9, cx + Rl * .9, cy + Rl * .9], outline=(178, 34, 30), width=3)
-f1 = ImageFont.truetype(FONT2, int(L_ * .11)); f2 = ImageFont.truetype(FONT, int(L_ * .045)); f3 = ImageFont.truetype(FONT, int(L_ * .03))
-def ctext(t, y, f, col=(150, 26, 24)):
+if np.mean(odd.nrm(label)[:, 1]) > 0: odd.recalc(label, inside=True)
+planar_uv(label, C, LR * 1.015)
+L_ = 1024; img = Image.new('RGB', (L_, L_), (150, 22, 24)); dr = ImageDraw.Draw(img); cx = cy = L_ / 2; Rl = L_ / 2 / 1.015
+dr.ellipse([cx - Rl, cy - Rl, cx + Rl, cy + Rl], fill=(158, 24, 26))
+dr.ellipse([cx - Rl * .985, cy - Rl * .985, cx + Rl * .985, cy + Rl * .985], outline=(96, 12, 14), width=int(L_ * .022))   # 가장자리 짙은 테
+dr.ellipse([cx - Rl * .9, cy - Rl * .9, cx + Rl * .9, cy + Rl * .9], outline=(120, 16, 18), width=3)
+f1 = ImageFont.truetype(FONT2, int(L_ * .06)); f3 = ImageFont.truetype(FONT, int(L_ * .026))
+def ctext(t, y, f, col=(232, 205, 170)):
     w = dr.textlength(t, font=f); dr.text((cx - w / 2, y), t, font=f, fill=col)
-ctext('ODD HAUS', cy - Rl * .62, f1); ctext('RECORDS', cy - Rl * .36, f2, (60, 44, 34))
-ctext('VIN', cy + Rl * .18, ImageFont.truetype(FONT2, int(L_ * .085)), (40, 30, 26)); ctext('“LITTLE SHADOWS”', cy + Rl * .42, f3, (60, 44, 34))
-dr.text((cx - Rl * .78, cy - L_ * .02), 'SIDE B', font=f3, fill=(60, 44, 34)); w = dr.textlength('45 RPM', font=f3); dr.text((cx + Rl * .78 - w, cy - L_ * .02), '45 RPM', font=f3, fill=(60, 44, 34))
-ctext('℗ 1962 ODD HAUS · ALL RIGHTS RESERVED', cy + Rl * .66, ImageFont.truetype(FONT, int(L_ * .018)), (90, 70, 56))
+ctext('ODD HAUS RECORDS', cy + Rl * .62, f1)                             # 눈 아래로 보이는 글자 (위쪽은 눈에 가린다)
+ctext('VIN  ·  SIDE A  ·  45 RPM', cy + Rl * .76, f3, (220, 190, 150))
 lab = np.asarray(img).astype(np.float64)[::-1] / 255
 yy, xx = np.mgrid[0:L_, 0:L_]; rr2 = np.hypot(xx - cx, yy - cy) / Rl
 P3 = np.stack([xx / L_, yy / L_, np.zeros_like(xx, float)], -1).reshape(-1, 3)
 age = (tex.fbm(P3, 6, 4, seed=41).reshape(L_, L_) * .5 + .5)
 lab *= (1 - .10 * age[..., None]) * np.array([1, .98, .94])
 spin = np.zeros((L_, L_)); ang = np.arctan2(yy - cy, xx - cx)
-for k in range(9):                                                    # 스핀들 자국: 구멍 둘레의 짧은 검은 호
-    a0 = rng.uniform(-math.pi, math.pi); r0 = rng.uniform(.19, .32); da = rng.uniform(.3, 1.2)
+for k in range(5):                                                    # 바깥 테 가까이 긁힌 자국 · 손때
+    a0 = rng.uniform(-math.pi, math.pi); r0 = rng.uniform(.82, .95); da = rng.uniform(.2, .7)
     m = (np.abs((ang - a0 + math.pi) % TAU - math.pi) < da / 2) & (np.abs(rr2 - r0) < .006)
     spin = np.maximum(spin, m * rng.uniform(.3, .7))
 lab *= (1 - spin[..., None] * .8)
-lab = np.where((rr2 < .19)[..., None], lab * .55, lab)                # 구멍 둘레 손때
 rgh = .62 + .12 * age + .2 * spin
 lh = age * .4 + np.clip(1 - np.abs(rr2 - .985) / .02, 0, 1) * .8
 label_m = tex.material('Vin_Label', TD, lab, rgh, tex.h2n(lh, 1.5))
@@ -408,10 +371,12 @@ label.data.materials.append(label_m)
 
 # ---------- 눈 · 동공 (눈알 표면을 따라 붙은 얇은 껍질 — 게임에서 리그의 pupil 노드가 움직인다) ----------
 def pupil(i):
-    """동공: 리그의 pupil 위치에 타원 격자를 놓고 눈알 표면으로 투영해 0.2 mm 띄운 매끈한 껍질."""
+    """동공: 콘셉트처럼 눈 안쪽 · 조금 아래에 세로 타원 — 격자를 눈알 표면으로 투영해 0.2 mm 띄운 매끈한 껍질.
+    (게임에 넣을 때 리그의 pupil 노드를 이 자리로 옮긴다 — 겉모습만 바뀐다)"""
     from mathutils.bvhtree import BVHTree
-    e = eyes[i]; pc = RP(f'pupil{i}'); bvh = BVHTree.FromObject(e, bpy.context.evaluated_depsgraph_get())
-    ax, az = .0066, .0084; nr, ns = 7, 36; verts = []; faces = []
+    e = eyes[i]; ec = eye_c[e.name]; inward = 1 if i == 0 else -1
+    pc = Vector((ec.x + inward * .0066, ec.y, ec.z - .0032)); bvh = BVHTree.FromObject(e, bpy.context.evaluated_depsgraph_get())
+    ax, az = .0060, .0092; nr, ns = 7, 36; verts = []; faces = []
     for k in range(nr + 1):
         f = (k / nr) ** .8
         for j in range(ns if k else 1):
@@ -431,7 +396,7 @@ def pupil(i):
 pupils = [pupil(0), pupil(1)]
 P_ = 256; yy, xx = np.mgrid[0:P_, 0:P_] / P_
 pc_img = np.full((P_, P_, 3), .012)
-for (cx_, cy_, r_) in ((.62, .70, .13), (.42, .40, .055)):              # 캐치라이트 (큰 것 · 작은 것)
+for (cx_, cy_, r_) in ((.60, .72, .09), (.42, .40, .04)):               # 캐치라이트 (작게 — 유광 반사는 재질이 만든다)
     pc_img = np.maximum(pc_img, (np.hypot(xx - cx_, (yy - cy_) * 1.15) < r_)[..., None] * .95)
 pr = np.full((P_, P_), .06)
 pupil_m = tex.material('Vin_Pupil', TD, pc_img, pr, None, coat=(1, .03))
@@ -456,8 +421,6 @@ def rubber(o, name, size, col, rough, grain=.4, sheen=None):
     kw = {'sheen': sheen} if sheen else {}
     m = tex.material(name, TD, Sx.img(c), Sx.img(rgh), tex.h2n(Sx.img(hh), 1.0), **kw)
     o.data.materials.append(m); return m
-lid_m = rubber(lids[0], 'Vin_Lid', 256, (.016, .016, .018), .2, .03)
-odd.uv_smart(lids[1], 66, .006); lids[1].data.materials.append(lid_m)
 limb_m = rubber(arms[0], 'Vin_Limb', 512, (.022, .022, .024), .46, .5, sheen=(.3, .5, (.25, .25, .27, 1)))
 for o in arms[1:] + legs:
     odd.uv_smart(o, 66, .006); o.data.materials.append(limb_m)

@@ -27,18 +27,22 @@ canvas { display: block; width: 100%; height: 100%; touch-action: none; }
 .tag b { font-size: 12px; }
 .tag .p { color: var(--warn); }
 .tag .o { color: var(--dim); }
+#concept { position: fixed; right: 12px; top: calc(12px + env(safe-area-inset-top, 0px)); z-index: 5; width: min(44vw, 640px); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 6px; }
+#concept img { display: block; width: 100%; border-radius: 4px; }
+#concept .cap { font-size: 11px; color: var(--dim); margin: 5px 2px 1px; }
 #load { position: fixed; inset: 0; display: grid; place-items: center; color: var(--dim); font-size: 13px; pointer-events: none; }
 </style>
 </head>
 <body>
 <div id="load">모델 불러오는 중…</div>
+<div id="concept" hidden><a target="_blank" rel="noopener"><img alt="콘셉트 시트"></a><div class="cap"></div></div>
 <div id="ui">
   <h1><span>ODD HAUS 디자인 리뷰 <small>게임과 분리된 확인용 장면</small></span><button id="fold">접기</button></h1>
   <div class="row"><span class="lab">대상</span><span id="subj"></span></div>
   <div class="row"><span class="lab">카메라</span>
     <button data-v="front">앞</button><button data-v="side">옆</button><button data-v="back">뒤</button><button data-v="q34">3/4</button><button data-v="close">클로즈업</button><button data-v="spin">회전</button></div>
   <div class="row"><span class="lab">조명</span><button data-l="studio" class="on">중립 스튜디오</button><button data-l="game">게임 조명</button></div>
-  <div class="row"><span class="lab">보기</span><button data-x="compare">v2.9 PROTOTYPE과 비교</button><button data-x="clay">형태만(점토)</button><button data-x="wire">토폴로지(와이어)</button></div>
+  <div class="row"><span class="lab">보기</span><button data-x="concept">콘셉트 시트</button><button data-x="compare">v2.9 PROTOTYPE과 비교</button><button data-x="clay">형태만(점토)</button><button data-x="wire">토폴로지(와이어)</button></div>
   <div id="info"></div>
 </div>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
@@ -50,10 +54,10 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
 // 리뷰 후보 = 아직 승인 전 PROTOTYPE. 게임(index.html)은 이 파일들을 읽지 않는다.
 const SUBJECTS = [
-  { id: 'vin', name: 'Vin', file: '../assets/review/chr_vin_review.glb', old: '../assets/characters/vin/chr_vin.glb', h: .25, x: 0, ref: '키 24 cm' },
-  { id: 'buddy', name: 'Buddy', file: '../assets/review/npc_buddy_review.glb', old: '../assets/characters/buddy/npc_buddy.glb', h: .58, x: .9, ref: '어깨 33 cm' },
-  { id: 'bully', name: 'Bully', file: '../assets/review/enemy_bully_review.glb', old: '../assets/characters/bully/enemy_bully.glb', h: 1.55, x: 2.3, ref: '키 150 cm' },
-  { id: 'lounge', name: 'Lounge 구역', file: '../assets/review/env_lounge_section_review.glb', old: null, h: 1.6, x: 5.2, ref: '실제 크기' },
+  { id: 'vin', name: 'Vin', file: '../assets/review/chr_vin_review.glb', old: '../assets/characters/vin/chr_vin.glb', h: .25, x: 0, ref: '키 24 cm', concept: '../docs/concept/vin_sheet.webp', conceptName: 'VIN – 24 cm (전체 시트: docs/concept/lineup_visual_lock.webp)' },
+  { id: 'buddy', name: 'Buddy', file: '../assets/review/npc_buddy_review.glb', old: '../assets/characters/buddy/npc_buddy.glb', h: .58, x: .9, ref: '어깨 33 cm', concept: '../docs/concept/buddy_sheet.webp', conceptName: 'BUDDY 캐릭터 시트' },
+  { id: 'bully', name: 'Bully', file: '../assets/review/enemy_bully_review.glb', old: '../assets/characters/bully/enemy_bully.glb', h: 1.55, x: 2.3, ref: '키 150 cm', concept: '../docs/concept/bully_sheet.webp', conceptName: 'BULLY 캐릭터 시트' },
+  { id: 'lounge', name: 'Lounge 구역', file: '../assets/review/env_lounge_section_review.glb', old: null, h: 1.6, x: 5.2, ref: '실제 크기', concept: '../docs/concept/lounge_concept.webp', conceptName: '01. LOUNGE 환경 콘셉트' },
 ];
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
@@ -147,7 +151,13 @@ const oldTags = {};
 for (const S of SUBJECTS) if (S.old) { const el = document.createElement('div'); el.className = 'tag'; document.body.appendChild(el); oldTags[S.id] = el; }
 
 // 대상 버튼
-let cur = 'vin', view = 'q34', spin = false, compare = false, clay = false, wire = false;
+let cur = 'vin', view = 'q34', spin = false, compare = false, clay = false, wire = false, concept = innerWidth > 900;
+function showConcept() {
+  const el = document.getElementById('concept'), S = items[cur].S;
+  el.hidden = !concept || !S.concept;
+  if (!el.hidden && el.querySelector('img').getAttribute('src') !== S.concept) { el.querySelector('img').src = S.concept; el.querySelector('a').href = S.concept; }
+  el.querySelector('.cap').textContent = '콘셉트: ' + (S.conceptName || '') + ' — 누르면 크게';
+}
 const subj = document.getElementById('subj');
 for (const S of SUBJECTS) {
   const b = document.createElement('button'); b.textContent = S.name; b.dataset.s = S.id; subj.appendChild(b);
@@ -196,6 +206,7 @@ const store = new Map();
 function applyView() {
   for (const id in items) {
     const it = items[id];
+    if (it.cand) it.cand.root.visible = id === cur;                         // 한 번에 하나만 — 옆 · 뒤 카메라를 다른 후보가 가리지 않게
     if (it.old) {
       it.old.root.visible = compare && id === cur && !!it.cand;
       if (it.old.root.visible) { const b = it.box, sz = b.getSize(new THREE.Vector3()); it.old.root.position.set(b.max.x + sz.x * .4 + .05 - (it.S.id === 'vin' ? 0 : 0), 0, 0); }
@@ -213,7 +224,8 @@ function applyView() {
     }
   }
   clayMat.wireframe = wire;
-  document.querySelectorAll('[data-x]').forEach(b => b.classList.toggle('on', ({ compare, clay, wire })[b.dataset.x]));
+  showConcept();
+  document.querySelectorAll('[data-x]').forEach(b => b.classList.toggle('on', ({ compare, clay, wire, concept })[b.dataset.x]));
 }
 
 document.getElementById('ui').addEventListener('click', e => {
@@ -222,7 +234,7 @@ document.getElementById('ui').addEventListener('click', e => {
   if (b.dataset.s) { cur = b.dataset.s; info(); applyView(); focus(); }
   if (b.dataset.v) { if (b.dataset.v === 'spin') spin = !spin; else view = b.dataset.v; focus(); }
   if (b.dataset.l) setLight(b.dataset.l);
-  if (b.dataset.x) { if (b.dataset.x === 'compare') compare = !compare; if (b.dataset.x === 'clay') clay = !clay; if (b.dataset.x === 'wire') wire = !wire; applyView(); focus(); }
+  if (b.dataset.x) { if (b.dataset.x === 'compare') compare = !compare; if (b.dataset.x === 'clay') clay = !clay; if (b.dataset.x === 'wire') wire = !wire; if (b.dataset.x === 'concept') concept = !concept; applyView(); focus(); }
 });
 addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); });
 
@@ -240,11 +252,11 @@ renderer.setAnimationLoop(t => {
   controls.update(); renderer.render(scene, camera);
   for (const id in items) {
     const it = items[id];
-    placeTag(tags[id], it.cand?.root, tagText(it, false), id === cur || view !== 'close');
+    placeTag(tags[id], it.cand?.root, tagText(it, false), id === cur);
     if (oldTags[id]) placeTag(oldTags[id], it.old?.root, tagText(it, true), it.old?.root.visible);
   }
 });
-window.REVIEW = { items, set: (c, v_, l, x) => { cur = c; view = v_; if (l) setLight(l); compare = !!(x && x.compare); clay = !!(x && x.clay); wire = !!(x && x.wire); info(); applyView(); focus(); }, ready: true };
+window.REVIEW = { items, camera, controls, look: (t, p) => { controls.target.set(...t); camera.position.set(...p); camera.near = .005; camera.updateProjectionMatrix(); }, set: (c, v_, l, x) => { cur = c; view = v_; if (l) setLight(l); compare = !!(x && x.compare); clay = !!(x && x.clay); wire = !!(x && x.wire); concept = !!(x && x.concept); info(); applyView(); focus(); }, ready: true };
 setLight('studio'); info(); applyView(); focus();
 </script>
 </body>

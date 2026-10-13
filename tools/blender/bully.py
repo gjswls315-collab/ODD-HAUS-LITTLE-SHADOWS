@@ -41,6 +41,7 @@ def sdf_obj(name, fn_cm, lo, hi, vox, faces, subdiv=1, smooth_it=2):
     odd.drop_islands(d)
     odd.smooth(d, smooth_it, .4)
     o = odd.retopo(d, faces, subdiv, name); odd.delete(d)
+    odd.recalc(o)                                                                                   # 면 방향을 다시 바깥으로 (뒤집힌 면은 웹 뷰어에서 사라진다)
     return o
 
 
@@ -75,9 +76,9 @@ def head_sdf(q):
     d = sx_(d, -E_(q, (2.65, 131.75, 10.8), (.3, .28, .4)), .25)                       # 올라간 입꼬리 보조개
     for e in EYE:                                                                     # 눈구멍 + 눈꺼풀
         d = sx_(d, -E_(q, e + np.array([0, 0, -.5]), (2.2, 1.75, 1.85)), .55)
-        upl_ = E_(q, e + np.array([0, 1.15, .3]), (2.1, .72, 1.35))
+        upl_ = E_(q, e + np.array([0, .82, .38]), (2.15, .8, 1.4))                    # 위 눈꺼풀이 눈동자 위를 덮는다 (반쯤 감긴 눈 — 콘셉트)
         lol_ = E_(q, e + np.array([0, -1.25, .2]), (1.9, .5, 1.15))
-        lidcut = -E_(q, e + np.array([0, -.05, 1.0]), (1.65, .82, 1.4))              # 눈 뜬 틈 (눈알이 보이는 곳)
+        lidcut = -E_(q, e + np.array([0, -.3, 1.0]), (1.62, .6, 1.4))                 # 눈 뜬 틈 (가늘게)
         d = sm(d, sx_(sm(upl_, lol_, .3), lidcut, .25), .5)
     neck = S_(q, (0, 114, 0.5), (0, 129, 1.8), 6.0, 5.2); d = sm(d, neck, 2.2)
     return d
@@ -225,35 +226,51 @@ for (dr, dy) in ((-.2, -.6), (.35, -.4), (.45, .3), (.2, .9), (-.25, 1.0)):
 neckrib = odd.loft('Bully_TeeRib', rib); odd.solidify(neckrib, .003, offset=-1); odd.subsurf(neckrib, 1)
 
 # =====================================================================================
-# 4. 청바지: 엉덩이 · 다리를 1.6 cm 부풀린 껍질 → 허리 · 발목에서 자르고 무릎 · 발목 주름 + 접은 밑단
+# 4. 헐렁한 검정 카고 바지 (콘셉트 시트): 다리를 3 cm 이상 부풀린 일자 통 · 허벅지 바깥 카고 주머니(덮개) · 밑단이 신발 위에 쌓여 주름진다
 # =====================================================================================
+# 다리 단면: 리그의 좁은 자세(발 ±5 cm)에서도 두 다리가 붙지 않도록 중심을 바깥으로 옮기고 반지름을 키운다 → 안쪽 선은 그대로, 바깥 · 앞뒤만 헐렁
+P_OFF = (1.2, 2.6, 2.2); P_RAD = (9.2, 7.9, 6.3)                                               # (엉덩이 · 무릎 · 발목) 바깥 이동 · 반지름
+def pant_leg(q, s):
+    sg = np.sign(HIP[s][0]); o = lambda j: np.array([sg * P_OFF[j], 0, 0])
+    t_ = S_(q, HIP[s] + np.array([0, 2, 0]) + o(0), KNE[s] + o(1), P_RAD[0], P_RAD[1])
+    b_ = S_(q, KNE[s] + o(1), ANK[s] + np.array([0, -4.5, 0]) + o(2), P_RAD[1], P_RAD[2])
+    return sm(t_, b_, 2.0)
+def pocket_c(s):
+    """허벅지 바깥 면의 카고 주머니 자리 (게임 cm)."""
+    t = (HIP[s][1] + 2 - 56) / (HIP[s][1] + 2 - KNE[s][1]); cx = HIP[s][0] + (KNE[s][0] - HIP[s][0]) * t + np.sign(HIP[s][0]) * (P_OFF[0] + (P_OFF[1] - P_OFF[0]) * t)
+    rad = P_RAD[0] + (P_RAD[1] - P_RAD[0]) * t
+    return np.array([np.sign(HIP[s][0]) * (min(abs(cx) + rad, PANTS_X) - .3), 56.0, .8])
+PANTS_X = 17.4                                                                                    # 바깥 옆선 한계: 늘어뜨린 손(손목 x ±20 cm)과 겹치지 않게
 def jeans_sdf(q):
-    d = E_(q, (0, 79, 0), (13.4, 8.6, 9.4))
+    d = E_(q, (0, 79, 0), (14.4, 8.6, 10.4))
+    d = sm(d, np.minimum(pant_leg(q, 0), pant_leg(q, 1)), 3.0)                                   # 두 다리는 딱 합친다 (치마처럼 이어지지 않게)
     for s in (0, 1):
-        d = sm(d, leg_sdf(q, s, 1.7), 3.0)
-    return d
-jeans = sdf_obj('Bully_Jeans', jeans_sdf, (-24, 6, -14), (24, 90, 14), .006, 4200, subdiv=1)
+        pc = pocket_c(s); sg = np.sign(HIP[s][0])
+        d = sm(d, odd.sd_box(q, pc, (1.0, 5.4, 4.3), None, .7), .7)                                  # 카고 주머니
+        d = sm(d, odd.sd_box(q, pc + np.array([sg * .45, 5.6, 0]), (.75, 1.3, 4.7), None, .5), .4)   # 주머니 덮개
+    return sx_(d, np.abs(q[:, 0]) - (PANTS_X + 1.0), 1.0)
+jeans = sdf_obj('Bully_Pants', jeans_sdf, (-30, 2, -18), (30, 90, 18), .006, 5200, subdiv=1)
 bis(jeans, cmv(0, 82.5, 0), gv(0, 1, 0), outer=True)
-bis(jeans, cmv(0, 16.5, 0), gv(0, 1, 0), inner=True)
+bis(jeans, cmv(0, 11.0, 0), gv(0, 1, -.12), inner=True)                             # 밑단: 뒤가 조금 더 내려온다
 for s in (0, 1):
-    # 발목 위 겹주름 (밑단이 신발에 얹혀 쌓인다) · 무릎 앞 · 오금 주름
-    for k, yy in enumerate((19.5, 23.0, 27.2, 32.0)):
-        a_, b_ = odd.project(jeans, [cmv(ANK[s][0] - 4.6, yy + (k % 2) * .8, 3.6), cmv(ANK[s][0] + 4.6, yy - (k % 2) * .8, 3.6)])
-        odd.crease(jeans, a_, b_, .011, .0035 - .0006 * k)
-    for yy, dz in ((44.5, 4.5), (47.5, 4.2), (40, -4.6), (43, -4.8)):
-        a_, b_ = odd.project(jeans, [cmv(KNE[s][0] - 3.5, yy, dz), cmv(KNE[s][0] + 3.5, yy + 1.2, dz)])
-        odd.crease(jeans, a_, b_, .009, .0028)
+    # 밑단이 신발 위에 쌓인 겹주름 (불규칙) · 무릎 앞 · 오금 주름
+    rs_ = np.random.default_rng(40 + s)
+    for k, yy in enumerate((13.5, 16.2, 19.4, 22.8, 26.5)):
+        tilt = rs_.uniform(-1.2, 1.2)
+        for fz in (4.6, -4.4):
+            a_, b_ = odd.project(jeans, [cmv(ANK[s][0] - 6.6, yy + tilt, fz * 1.25), cmv(ANK[s][0] + 6.6, yy - tilt, fz * 1.25)])
+            odd.crease(jeans, a_, b_, .012, .0042 - .0005 * k)
+    for yy, dz in ((45.0, 5.6), (48.5, 5.2), (40.5, -5.6), (43.5, -5.8)):
+        a_, b_ = odd.project(jeans, [cmv(KNE[s][0] - 4.2, yy, dz), cmv(KNE[s][0] + 4.2, yy + 1.4, dz)])
+        odd.crease(jeans, a_, b_, .010, .003)
     for yy in (62, 66):                                                                    # 사타구니 쪽 주름 (V)
-        a_, b_ = odd.project(jeans, [cmv(np.sign(HIP[s][0]) * 2.0, yy + 3, 9.0), cmv(np.sign(HIP[s][0]) * 7.5, yy, 9.0)])
-        odd.crease(jeans, a_, b_, .008, .0022)
+        a_, b_ = odd.project(jeans, [cmv(np.sign(HIP[s][0]) * 2.0, yy + 3, 9.6), cmv(np.sign(HIP[s][0]) * 8.0, yy, 9.6)])
+        odd.crease(jeans, a_, b_, .008, .0024)
+    pc = pocket_c(s)                                                                       # 주머니 아래로 늘어진 천 주름
+    a_, b_ = odd.project(jeans, [cmv(*(pc + np.array([0, -6.5, -3]))), cmv(*(pc + np.array([0, -11, 2])))])
+    odd.crease(jeans, a_, b_, .010, .003)
 odd.solidify(jeans, .0028, offset=-1)
 cuffs = []
-for s in (0, 1):
-    c = ANK[s] + np.array([0, 9.4 + 1.6, .2]); rings = []
-    for (dr, dy) in ((-.25, -1.9), (.45, -1.6), (.62, 0), (.5, 1.6), (-.15, 1.9)):
-        rr = 5.3 + 1.7 + dr
-        rings.append([cmv(c[0] + rr * math.cos(TAU * k / 40), c[1] + dy + .3 * math.sin(TAU * k / 40 * 3), c[2] + rr * .92 * math.sin(TAU * k / 40)) for k in range(40)])
-    cf = odd.loft(f'Bully_Cuff{s}', rings); odd.solidify(cf, .003, offset=-1); odd.subsurf(cf, 1); cuffs.append(cf)
 
 # =====================================================================================
 # 5. 신발 (shoe.py — Vin과 같은 구조, 3.4배) · 손목 밴드
@@ -330,7 +347,7 @@ odd.solidify(brim, .0045, offset=0); odd.subsurf(brim, 1)
 HLN = np.array([0, 1, -.4]); HLN /= np.linalg.norm(HLN)
 NPN = np.array([0, 1, -.38]); NPN /= np.linalg.norm(NPN)
 HC, HR = np.array([0, 140.4, 2.2]), 11.1
-def lock_path(a, L, rs, r0, spread=0.0, flick=0.0):
+def lock_path(a, L, rs, r0, spread=0.0, flick=0.0, flare=0.0):
     """캡 띠 밑(뿌리)에서 아래로 떨어지는 머리 다발의 중심선: 위에서는 두개를 따라 눕고, 목덜미 쪽에서는 곧게 떨어지며 끝이 살짝 들린다."""
     sa, ca = math.sin(a), math.cos(a)
     y0 = 141.0
@@ -342,47 +359,85 @@ def lock_path(a, L, rs, r0, spread=0.0, flick=0.0):
         y = y0 - L * t
         f = math.sqrt(max(0.0, 1 - ((y - HC[1]) / HR) ** 2)) if y > HC[1] else 1.0
         f = max(f, .86 if abs(ca) > .5 else .97)                                                  # 뒤는 목덜미를 따라 조금 안으로, 옆은 곧게
-        lift = -.7 * r0 + (.7 * r0 + .3) * min(1.0, t / .3) + flick * t * t                     # 뿌리는 캡 속 머리 안에서 시작 → 위로 떠오름 → 끝이 들림 (cm)
+        lift = -.7 * r0 + (.7 * r0 + .3) * min(1.0, t / .3) + flick * t * t + flare * t ** 1.0     # 뿌리는 캡 속 머리 안에서 시작 → 위로 떠오름 → 끝으로 갈수록 바깥으로 부푼다 (cm)
         rad = f + lift / HR
         aw = a + spread * t ** 1.5                                                               # 끝으로 갈수록 갈라진다
         pts.append(np.array([HR * .9 * rad * math.sin(aw), y, HC[2] + HR * rad * math.cos(aw)]))
     return pts
+def flat_map(n, k):
+    """다발을 n 방향으로 1/k 만큼 납작하게: 좌표를 n 방향으로 k배 늘린 공간에서 둥근 관을 잰다 (둥근 막대 → 머리에 눕는 납작한 다발)."""
+    n = np.array(n, float); n /= np.linalg.norm(n)
+    return np.eye(3) + (k - 1) * np.outer(n, n)
 LOCKS = []
 _rl = np.random.default_rng(11)
-for g in range(16):                                                                              # 옆 · 뒤: 큰 뭉치 16개 × 가는 다발 2–4 (뿌리에서 뭉치고 끝에서 갈라져 방향이 다르다)
+for g in range(26):                                                                              # 옆 · 뒤: 큰 뭉치 26개 × 가는 다발 2–4 (뿌리에서 뭉치고 끝에서 갈라져 방향이 다르다)
     side_ = -1 if g % 2 else 1
-    a_g = side_ * (math.radians(60) + (math.pi - math.radians(60)) * ((g // 2) + _rl.uniform(-.25, .25)) / 7.6)
+    a_g = side_ * (math.radians(38) + (math.pi - math.radians(38)) * ((g // 2) + _rl.uniform(-.25, .25)) / 12.6)  # 관자놀이부터 (앞머리와 옆머리 사이가 비지 않게)
     back = abs(math.cos(a_g)) if math.cos(a_g) < 0 else 0
-    Lg = _rl.uniform(6.6, 8.4) + 3.0 * back
+    face_side = abs(a_g) < math.radians(70)                                                      # 얼굴 옆 다발: 눈가를 덮지 않게 짧고 덜 부푼다
+    Lg = (_rl.uniform(10.5, 13.0) + 2.2 * back) * (.82 if face_side else 1.0)                   # 콘셉트: 귀를 덮고 턱 · 목덜미까지 오는 더벅머리
+    flare_g = (.9 if face_side else 2.6) * _rl.uniform(.8, 1.2)                                   # 콘셉트: 캡 밑에서 바깥으로 부푼 더벅머리
     fan = _rl.uniform(-.06, .06)
     nsub = int(_rl.integers(2, 5))
     for j in range(nsub):
         u = (j - (nsub - 1) / 2)
         a = a_g + u * .06 + _rl.uniform(-.015, .015)
         L = Lg * _rl.uniform(.74, 1.1)
-        r0 = _rl.uniform(.55, .8)
-        pts = lock_path(a, L, _rl, r0, spread=fan + u * _rl.uniform(.05, .12), flick=_rl.uniform(.0, .9) * (1 if _rl.random() < .6 else .2))
-        rad = [r0, r0 * .95, r0 * .8, r0 * .56, r0 * .24]
+        r0 = _rl.uniform(.75, 1.05)
+        pts = lock_path(a, L, _rl, r0, spread=fan + u * _rl.uniform(.05, .12), flick=_rl.uniform(.0, .9) * (1 if _rl.random() < .6 else .2), flare=flare_g)
+        rad = [r0, r0 * .95, r0 * .82, r0 * .62, r0 * .34]                                       # 끝을 바늘처럼 뾰족하게 하지 않는다 (고드름처럼 보인다)
         lo_ = np.min(pts, 0) - r0 - 1.2; hi_ = np.max(pts, 0) + r0 + 1.2                      # smin 폭(.55)보다 넉넉히 — 경계에서 값이 튀지 않게
-        LOCKS.append((pts, rad, lo_, hi_))
+        LOCKS.append((pts, rad, lo_, hi_, flat_map((math.sin(a), 0, math.cos(a)), 1.5)))       # 머리 쪽(바깥 방향)으로 납작한 다발
+_hbvh = BVHTree.FromObject(head, bpy.context.evaluated_depsgraph_get())
+def face_z(x, y):
+    """실제 조형된 머리 표면의 앞 z (게임 cm) — 앞에서 광선을 쏴서 찾는다 (두개 타원 추정은 눈썹뼈 쪽에서 1 cm 가까이 안쪽이라 앞머리가 묻힌다)."""
+    hit, _, _, _ = _hbvh.ray_cast(Vector(cmv(x, y, 40)), Vector((0, 1, 0)))
+    if hit is not None: return -hit.y / .01
+    e2 = 1 - (x / 9.6) ** 2 - ((y - 140.2) / 10.9) ** 2
+    return 2.2 + 10.8 * math.sqrt(max(e2, .05))
+def bang_path(x0, L, sweep, rs, r0):
+    """앞머리 다발 중심선: 캡 띠 밑 → 이마 표면 위로 자기 두께만큼 떠서 내려오며 옆으로 쓸린다."""
+    pts = []; y0 = band_y(12.0) + .6 - .02 * x0 * x0
+    rads = [1.0, .92, .76, .54, .3]
+    for k, t in enumerate(np.linspace(0, 1, 5)):
+        x = x0 + sweep * t ** 1.3; y = y0 - L * t
+        lift = -.4 * r0 if k == 0 else rads[k] * r0 * .75 + .18 + rs.uniform(0, .3) * t * t
+        pts.append(np.array([x, y, face_z(x, y) + lift]))
+    return pts
+_rb = np.random.default_rng(17)
+for k in range(18):                                                                              # 앞머리 다발 18개 (뿌리 사이로 이마가 비치지 않게 촘촘히)
+    x0 = -6.0 + 12.0 * (k + _rb.uniform(-.3, .3)) / 17
+    Lb = _rb.uniform(5.0, 7.4) * (1 - .25 * min(1, abs(x0) / 6))
+    sweep = -1.7 * _rb.uniform(.6, 1.2) + .4 * np.sign(x0) * min(1, abs(x0) / 4)
+    r0 = _rb.uniform(.85, 1.15); pts = bang_path(x0, Lb, sweep, _rb, r0)
+    LOCKS.append((pts, [r0, r0 * .92, r0 * .76, r0 * .54, r0 * .3], np.min(pts, 0) - r0 - 1.2, np.max(pts, 0) + r0 + 1.2, flat_map((0, .25, 1), 1.8)))
 def locks_sdf(q):
     d = np.full(len(q), 1e3)
-    for pts, rad, lo_, hi_ in LOCKS:
+    for pts, rad, lo_, hi_, M in LOCKS:
         m = np.all((q >= lo_) & (q <= hi_), 1)
         if m.any():
-            d[m] = np.minimum(d[m], C_(q[m], pts, rad, .35))
+            d[m] = np.minimum(d[m], C_(q[m] @ M.T, [M @ p_ for p_ in pts], rad, .35))
     return d
+HL2 = np.array([0, 1, -.5]); HL2 /= np.linalg.norm(HL2)
+def scalp_sdf(q):
+    """두피 위 얇은 머리 층 (0.55 cm): 앞머리 · 옆머리 다발 사이로 이마 · 관자놀이 살이 비치지 않게 — 캡 띠 밑 2 cm 정도까지만."""
+    d = np.full(len(q), 1e3)
+    m = (q[:, 1] > 130) & (np.abs(E_(q, (0, 140.2, 2.2), (9.6, 10.9, 10.8))) < 3.0)
+    if m.any():
+        d[m] = head_sdf(q[m]) - .55
+    return sx_(d, -((q - np.array([0, 142.0, 11.0])) @ HL2), .5)
 def hair_mass_sdf(q):
     d = E_(q, (0, 140.4, 2.2), (9.95, 11.1, 11.1))
     d = sx_(d, -((q - np.array([0, 135.8, 0])) @ NPN), .8)                                       # 옆은 귀 위까지, 뒤는 목덜미 쪽으로 낮게
     d = sx_(d, -((q - np.array([0, 143.2, 11.0])) @ HLN), .6)                                     # 앞머리선 (캡 띠 바로 밑)
     d = sm(d, sx_(E_(q, (0, 145.6, 11.6), (3.4, 2.9, 1.5)), -((q - np.array([0, 143.6, 11.0])) @ HLN), .4), .8)   # 스냅백 구멍으로 부푼 머리
+    d = sm(d, scalp_sdf(q), .5)                                                                      # 다발 사이 두피를 덮는 얇은 층
     d = sm(d, locks_sdf(q), .55)                                                                     # 다발이 머리 덩어리에서 자라 나온다
     return d
-hairmass = sdf_obj('Bully_HairMass', hair_mass_sdf, (-13.5, 126, -15.5), (13.5, 154, 15.5), .0013, 7000)
+hairmass = sdf_obj('Bully_HairMass', hair_mass_sdf, (-17, 120, -18.5), (17, 154, 15.5), .0013, 9000)
 dg = bpy.context.evaluated_depsgraph_get(); hbvh = BVHTree.FromObject(hairmass, dg)
 clumps = []
-def clump(root_cm, dir_cm, L, r0, curl=(0, 0, 0), seed=0, bvh=None, stick=4, off=(.004, .004)):
+def clump(root_cm, dir_cm, L, r0, curl=(0, 0, 0), seed=0, bvh=None, stick=4, off=(.004, .004), radii=None, flat=.45):
     bvh = bvh or hbvh
     r_ = np.random.default_rng(seed)
     root = Vector(cmv(*root_cm)); dv = Vector(cmv(*dir_cm)) - Vector(cmv(0, 0, 0)); dv.normalize()
@@ -394,7 +449,7 @@ def clump(root_cm, dir_cm, L, r0, curl=(0, 0, 0), seed=0, bvh=None, stick=4, off
             p_ = loc + nrm_ * (off[0] + off[1] * t)
         pts.append(p_.copy())
         p_ = p_ + dv * (L * .01 / 5) + Vector(cmv(*curl)) * (t * t) - Vector(cmv(0, 0, 0)) * 0
-    radii = [1.0, .97, .88, .72, .52, .26]
+    radii = radii or [1.0, .97, .88, .72, .52, .26]
     o = odd.curve_tube('_clump', pts, r0 * .01, res=6, bevel_res=2, radii=radii)
     # 납작하게: 머리 표면 법선 방향 두께를 줄여 머리에 눕는 다발로 (둥근 막대 → 납작한 머리 다발)
     P = np.array([tuple(p) for p in pts]); V = odd.co(o)
@@ -404,16 +459,17 @@ def clump(root_cm, dir_cm, L, r0, curl=(0, 0, 0), seed=0, bvh=None, stick=4, off
     Cn = C[np.arange(len(V)), j]
     N = np.array([tuple(bvh.find_nearest(Vector(c))[1] or Vector((0, 0, 1))) for c in Cn])
     off_ = V - Cn; along = (off_ * N).sum(1)
-    odd.set_co(o, V - N * (along * .45)[:, None])
+    odd.set_co(o, V - N * (along * flat)[:, None])
     clumps.append(o)
 r_ = np.random.default_rng(3)
 headbvh = BVHTree.FromObject(head, dg)
-for k in range(22):                                                                              # 앞머리: 캡 띠 밑에서 이마로 흘러내리는 다발 (헝클어진 끝, 두 겹)
-    x0 = -5.8 + 11.6 * ((k % 15) + r_.uniform(-.45, .45)) / 14 + (.35 if k >= 15 else 0)
-    y0 = band_y(11.5) + .5 - .02 * x0 * x0 + r_.uniform(-.2, .3)
+for k in range(7):                                                                               # 가는 가닥: 앞머리 위에 눕혀 다발 결을 나눈다 (튀어나오면 가시처럼 보인다)
+    x0 = -5.8 + 11.6 * ((k % 11) + r_.uniform(-.4, .4)) / 6
+    y0 = band_y(11.5) - .2 - .02 * x0 * x0 + r_.uniform(-.2, .3)
     side = np.sign(x0) * min(1, abs(x0) / 4)
-    clump((x0, y0, 12.6), (side * r_.uniform(.15, .55) + r_.uniform(-.3, .3), -1.0, r_.uniform(.25, .5)), r_.uniform(2.0, 4.8) * (1 - .18 * abs(side)) * (.7 if k >= 15 else 1),
-          r_.uniform(.5, .78), curl=(side * r_.uniform(.1, .45), r_.uniform(.05, .3), r_.uniform(.1, .35)), seed=100 + k, bvh=headbvh, stick=3, off=(.0068, .003))
+    clump((x0, y0, 13.4), (side * r_.uniform(.15, .5) + r_.uniform(-.3, .2) - .32, -1.0, 0), r_.uniform(3.6, 5.6) * (1 - .15 * abs(side)),
+          r_.uniform(.22, .3), curl=(side * r_.uniform(.1, .3), 0, 0), seed=100 + k, bvh=hbvh, stick=6, off=(.0012, .0004),
+          radii=[.7, 1.0, .9, .7, .45, .2], flat=.6)
 hair = odd.join(clumps, 'Bully_Hair')
 brows = []
 for s in (0, 1):
@@ -423,11 +479,17 @@ for s in (0, 1):
     odd.scale_region(brows[-1], cmv(*mid), .05, (1, 1, .55), kind='flat') if False else None
 
 # =====================================================================================
-# 8. 빨간 플라잉V (몸통 모서리 둥글게 · 넥 · 지판 · V 헤드 · 험버커 2 · 브리지 · 노브 3 · 줄 6) + 몸을 가로지르는 스트랩
+# 8. 빨간 스트랫 기타 (콘셉트 시트): 더블 컷어웨이 몸통(긴 위 혼 · 팔 받침 · 배 받침 깎임 · 둥근 모서리) · 흰 픽가드 · 싱글 픽업 3 ·
+#    크롬 브리지 · 크림 노브 3 · 메이플 넥 + 로즈우드 지판 · 6-in-line 헤드(페그 6) · 줄 6
+#    오른쪽 허리 앞에 들고 넥은 왼쪽 위로. 갈색 가죽 스트랩: 꼬리 핀 → 오른쪽 허리 → 등을 가로질러 → 왼쪽 어깨 → 가슴 → 위 혼 핀
+#    (게임 리그의 guitar 노드는 지금 등에 있다 — 게임에 넣을 때 쉬는 자세의 기타 자리를 앞으로 옮긴다: 겉모습만)
 # =====================================================================================
-G0 = J['guitar']; ang = math.radians(24)
-A_ = np.array([math.sin(ang), math.cos(ang), 0]); NF = np.array([0, 0, -1.0]); U_ = np.cross(NF, A_); U_ /= np.linalg.norm(U_)
+NF = np.array([0, .14, 1.0]); NF /= np.linalg.norm(NF)                                           # 몸통 앞면: 앞(살짝 위)
+A_ = np.array([math.cos(math.radians(27)), math.sin(math.radians(27)), 0.0]); A_ -= NF * (A_ @ NF); A_ /= np.linalg.norm(A_)   # 넥: 캐릭터 왼쪽 위
+U_ = np.cross(NF, A_); U_ /= np.linalg.norm(U_)                                                   # +u = 위 혼(베이스 쪽)
 GS = .88
+BODYC = np.array([-6.5, 77.5, 15.6])                                                              # 몸통 가운데 (오른쪽 허리 앞)
+G0 = BODYC + A_ * (22 * GS)
 def gl(u, a, w):                     # 기타 로컬(cm) → 게임 cm
     return G0 + U_ * (u * GS) + A_ * ((a - 2) * GS) + NF * (w * GS)
 def sd_poly2(px, py, poly):
@@ -439,53 +501,81 @@ def sd_poly2(px, py, poly):
         c1 = (py >= y0) != (py >= y1); xc = x0 + (py - y0) * ex / (ey + 1e-12)
         inside ^= c1 & (px < xc)
     return np.where(inside, -d, d)
-BODY_P = [(-3.6, 0), (-23.5, -37), (-17.5, -41.5), (-4.0, -19.5), (4.0, -19.5), (17.5, -41.5), (23.5, -37), (3.6, 0)]
-HEAD_P = [(-2.6, 33), (-4.6, 47.5), (-1.0, 45.0), (1.0, 45.0), (4.6, 47.5), (2.6, 33)]
+BODY_P = [(2.9, -1.0), (3.4, 1.8), (4.4, 4.4), (5.9, 5.6), (7.6, 5.0), (9.6, 2.4), (12.0, -1.5), (14.6, -6.5), (15.9, -11.5), (15.2, -15.5), (13.9, -18.5),
+          (14.3, -22.0), (15.6, -26.5), (16.1, -31.0), (15.4, -35.5), (13.0, -39.4), (9.0, -42.0), (4.0, -43.2), (0.0, -43.4),
+          (-4.0, -43.2), (-9.0, -42.0), (-13.0, -39.4), (-15.4, -35.5), (-16.1, -31.0), (-15.6, -26.5), (-14.2, -22.0), (-13.6, -18.5),
+          (-14.6, -14.0), (-15.0, -9.0), (-14.0, -4.5), (-12.0, -1.2), (-9.4, 1.2), (-7.0, 2.4), (-5.3, 1.9), (-4.0, .4), (-3.2, -1.0)]
+HEAD_P = [(-2.3, 33.4), (2.3, 33.4), (2.9, 36.0), (4.5, 40.0), (4.9, 46.5), (4.1, 51.2), (2.2, 52.9), (.3, 52.4), (-.9, 50.2), (-1.5, 46.5), (-1.8, 41.0), (-2.1, 36.5)]
+PG_P = [(2.9, -1.4), (7.5, -1.8), (10.6, -5.0), (11.8, -10.0), (10.8, -15.0), (8.6, -19.5), (6.6, -22.0), (5.6, -25.5), (4.6, -29.0), (3.0, -28.6), (-3.0, -28.6),
+        (-4.8, -29.8), (-6.5, -33.8), (-9.2, -37.0), (-12.0, -36.4), (-13.6, -32.2), (-13.2, -27.0), (-11.0, -21.8), (-9.6, -16.0), (-10.3, -9.5),
+        (-9.2, -4.6), (-6.6, -2.2), (-3.4, -1.8)]
 def ext(d2, w, t, r):
     qx = d2 + r; qy = np.abs(w) - t / 2 + r
     return np.hypot(np.maximum(qx, 0), np.maximum(qy, 0)) + np.minimum(np.maximum(qx, qy), 0) - r
 def to_g(q):
     rel = (q - G0) / GS; return rel @ U_, rel @ A_ + 2, rel @ NF
 def gbody_sdf(q):
-    u, a, w = to_g(q); return ext(sd_poly2(u, a, BODY_P), w, 3.6, .9)
+    u, a, w = to_g(q)
+    d = ext(sd_poly2(u, a, BODY_P), w, 4.5, 1.05)
+    wt = 2.25 - 1.25 * np.clip((u - 9.5) / 6, 0, 1) * np.clip((-a - 14) / 8, 0, 1)                 # 팔 받침 (앞면 위 혼 쪽 아래 둘레)
+    d = sx_(d, (w - wt) * .9, .6)
+    wb = -2.25 + 1.0 * np.clip((u - 8) / 6, 0, 1) * np.clip((a + 22) / 8, 0, 1)                    # 배 받침 (뒷면 위 혼 쪽)
+    d = sx_(d, (wb - w) * .9, .6)
+    return d
 def gneck_sdf(q):
     u, a, w = to_g(q)
-    hw = 2.2 + .35 * np.clip(a / 33, 0, 1)
-    neck = ext(np.maximum(np.abs(u) - hw, np.maximum(-a - 4, a - 34)), w + .55, 2.1, .7)
-    head_ = ext(sd_poly2(u, a, HEAD_P), w + .2, 1.5, .4)
+    hw = 2.8 - .7 * np.clip(a / 34, 0, 1)
+    neck = ext(np.maximum(np.abs(u) - hw, np.maximum(-a - 4, a - 34.2)), w - 1.75, 2.3, .9)
+    head_ = ext(sd_poly2(u, a, HEAD_P), w - 1.7, 1.4, .35)
     return np.minimum(neck, head_)
-gbox = [gl(u, a, w) for u in (-26, 26) for a in (-44, 50) for w in (-4, 4)]
+def pg_sdf(q):
+    u, a, w = to_g(q); return ext(sd_poly2(u, a, PG_P), w - 2.39, .28, .08) * GS
+gbox = [gl(u, a, w) for u in (-20, 20) for a in (-47, 56) for w in (-4, 6)]
 glo = np.min(gbox, 0); ghi = np.max(gbox, 0)
-gbody = sdf_obj('Bully_GuitarBody', gbody_sdf, tuple(glo), tuple(ghi), .0025, 2400)
-gneck = sdf_obj('Bully_GuitarNeck', gneck_sdf, tuple(glo), tuple(ghi), .002, 1600)
-def part_box(name, u, a, w, hu, ha, hw_, r):
+gbody = sdf_obj('Bully_GuitarBody', lambda q: gbody_sdf(q) * GS, tuple(glo), tuple(ghi), .0025, 2600)
+gneck = sdf_obj('Bully_GuitarNeck', lambda q: gneck_sdf(q) * GS, tuple(glo), tuple(ghi), .002, 1800)
+pickguard = sdf_obj('Bully_Pickguard', pg_sdf, tuple(np.min([gl(u, a, w) for u in (-15, 13) for a in (-39, 1) for w in (1.5, 3.5)], 0)),
+                    tuple(np.max([gl(u, a, w) for u in (-15, 13) for a in (-39, 1) for w in (1.5, 3.5)], 0)), .0012, 900, subdiv=0)
+def part_box(name, u, a, w, hu, ha, hw_, r, vox=.0008, faces=300):
     def fn(q):
         uu, aa, ww = to_g(q); qq = np.stack([uu - u, aa - a, ww - w], 1)
         return odd.sd_box(qq, (0, 0, 0), (hu, ha, hw_), None, r) * GS
     pts_ = np.array([gl(u + du, a + da, w + dw) for du in (-hu - 1, hu + 1) for da in (-ha - 1, ha + 1) for dw in (-hw_ - 1, hw_ + 1)])
-    return sdf_obj(name, fn, tuple(pts_.min(0)), tuple(pts_.max(0)), .0008, 300)
-pick = [part_box(f'Bully_Pickup{k}', 0, a, 2.1, 3.6, 1.9, .55, .35) for k, a in enumerate((-8.0, -15.5))]
-bridge = part_box('Bully_Bridge', 0, -21.5, 2.0, 4.1, .7, .5, .25)
-tailp = part_box('Bully_Tail', 0, -27.0, 2.0, 3.0, .6, .35, .2)
-knobs = [sdf_obj(f'Bully_Knob{k}', (lambda q, uu=uu, aa=aa: S_(q, gl(uu, aa, 1.8), gl(uu, aa, 3.1), 1.0 * GS, .85 * GS)), tuple(np.minimum(gl(uu - 2, aa - 2, 1), gl(uu + 2, aa + 2, 4))), tuple(np.maximum(gl(uu - 2, aa - 2, 1), gl(uu + 2, aa + 2, 4))), .0005, 120)
-         for k, (uu, aa) in enumerate(((10.5, -27.5), (13.5, -32.0), (16.0, -36.5)))]
+    return sdf_obj(name, fn, tuple(pts_.min(0)), tuple(pts_.max(0)), vox, faces)
+pick = [part_box(f'Bully_Pickup{k}', 0, a, 2.95, 4.1, .9, .45, .4) for k, a in enumerate((-14.8, -20.8, -26.4))]
+bridge = part_box('Bully_Bridge', 0, -31.6, 2.5, 3.7, 2.2, .22, .15)
+tailp = part_box('Bully_Saddles', 0, -30.9, 2.95, 3.3, .45, .3, .15)                              # 안장 6 (한 줄)
+knobs = [sdf_obj(f'Bully_Knob{k}', (lambda q, uu=uu, aa=aa: S_(q, gl(uu, aa, 2.5), gl(uu, aa, 3.9), 1.05 * GS, .9 * GS)),
+                 tuple(np.minimum(gl(uu - 2, aa - 2, 2), gl(uu + 2, aa + 2, 5))), tuple(np.maximum(gl(uu - 2, aa - 2, 2), gl(uu + 2, aa + 2, 5))), .0005, 140)
+         for k, (uu, aa) in enumerate(((-6.4, -25.0), (-8.6, -29.2), (-10.6, -33.6)))]
+knobs.append(sdf_obj('Bully_Switch', (lambda q: S_(q, gl(-8.4, -20.0, 2.5), gl(-8.0, -20.0, 3.8), .35 * GS, .45 * GS)),
+                     tuple(np.minimum(gl(-10, -22, 2), gl(-6, -18, 5))), tuple(np.maximum(gl(-10, -22, 2), gl(-6, -18, 5))), .0004, 100))
+TUN = [(2.95 - .1 * k, 36.8 + 2.75 * k) for k in range(6)]                                          # 페그 기둥 (헤드 위쪽 가장자리를 따라)
+tuners = []
+for k, (tu, ta) in enumerate(TUN):
+    post = (lambda q, tu=tu, ta=ta: sm(S_(q, gl(tu, ta, 2.3), gl(tu, ta, 3.5), .45 * GS, .38 * GS),
+                                       sm(S_(q, gl(tu, ta, .9), gl(tu + 2.6, ta, .9), .3 * GS, .3 * GS), E_(q, gl(tu + 3.3, ta, .9), (1.05 * GS, .95 * GS, .32 * GS),
+                                          np.column_stack([U_, A_, NF])), .2), .2))
+    tuners.append(sdf_obj(f'_tuner{k}', post, tuple(np.minimum(gl(tu - 1.5, ta - 1.6, -.5), gl(tu + 5, ta + 1.6, 4.2))), tuple(np.maximum(gl(tu - 1.5, ta - 1.6, -.5), gl(tu + 5, ta + 1.6, 4.2))), .0004, 260, subdiv=0))
+tuners = odd.join(tuners, 'Bully_Tuners')
 strings = []
-for k in range(6):
-    uo = (k - 2.5) * .62
-    strings.append(odd.curve_tube('_str', [cmv(*gl(uo * .78, -27.0, 2.55)), cmv(*gl(uo * .9, -10, 2.75)), cmv(*gl(uo, 31.5, 1.75))], (.035 + .008 * (5 - k)) * .01 * GS, res=4, bevel_res=1))
+for k in range(6):                                                                                 # k = 0 굵은 6번 줄 (위 혼 쪽)
+    ub = (2.5 - k) * 1.05; un = (2.5 - k) * .72; tu, ta = TUN[k]
+    strings.append(odd.curve_tube('_str', [cmv(*gl(ub, -30.6, 3.25)), cmv(*gl((ub + un) / 2, 2.0, 3.15)), cmv(*gl(un, 34.0, 3.0)), cmv(*gl(tu, ta, 3.3))],
+                                  (.03 + .009 * (5 - k)) * .01 * GS, res=6, bevel_res=1))
 gstrings = odd.join(strings, 'Bully_GuitarStrings')
-# 스트랩: 아래 핀(V 끝 근처) → 왼쪽 허리 옆 → 가슴을 가로질러 → 오른쪽 어깨 위 → 등 → 넥 쪽 핀
+# 스트랩
 dg = bpy.context.evaluated_depsgraph_get(); tbvh = BVHTree.FromObject(tee, dg)
-route = [gl(-12, -36, -2.2), (-14.5, 84, -6), (-14.8, 86, 2), (-10.5, 88, 10.5), (-2, 98, 12.6), (6, 108, 10.6), (11.5, 116, 4.5), (12.5, 119, -3), (9.0, 114, -11.5), gl(0, -3, -2.0)]
+route = [gl(0, -43.9, 0), (-21, 72, 9), (-17.5, 79, -2), (-12, 88, -10.5), (-3, 99, -11.8), (6.5, 110, -9.8), (12.4, 118, -2.6), (12.0, 116.5, 5.2), (8.0, 105, 11.8), gl(6.0, 6.0, 0)]
 spts, snrm = [], []
 for k, rp in enumerate(route):
     P_ = Vector(cmv(*rp))
     if 0 < k < len(route) - 1:
         loc, nrm_, _, _ = tbvh.find_nearest(P_); P_ = loc + nrm_ * .004; snrm.append(nrm_)
     else:
-        snrm.append(Vector(cmv(*(-NF))) - Vector(cmv(0, 0, 0)))
+        snrm.append(Vector(cmv(*NF)) - Vector(cmv(0, 0, 0)))
     spts.append(P_)
-sp, _ = odd.spline(spts, 40)
+sp, _ = odd.spline(spts, 48)
 sn = []
 for P_ in sp:
     loc, nrm_, _, _ = tbvh.find_nearest(P_); sn.append(nrm_ if (loc - P_).length < .03 else (P_ - Vector(cmv(0, 100, 0))).normalized())
@@ -493,8 +583,24 @@ axis_c = Vector(cmv(0, 100, 0))
 for _ in range(4):
     sn = [((sn[max(i - 1, 0)] + sn[i] * 2 + sn[min(i + 1, len(sn) - 1)]) / 4).normalized() for i in range(len(sn))]
 sn = [n_ if n_.dot((P_ - Vector((axis_c.x, axis_c.y, P_.z))).normalized()) > -.2 else -n_ for P_, n_ in zip(sp, sn)]
-strap = odd.ribbon('Bully_Strap', [P_ + n_ * .006 for P_, n_ in zip(sp, sn)], [.042] * len(sp), normals=sn)
-odd.solidify(strap, .0035, offset=0)
+strap = odd.ribbon('Bully_Strap', [P_ + n_ * .006 for P_, n_ in zip(sp, sn)], [.046] * len(sp), normals=sn)
+odd.solidify(strap, .0038, offset=0)
+# 가슴 위 버클 (금속 사각 고리) — 스트랩 길이 조절
+bi = int(len(sp) * .86); bp = sp[bi]; bt = (sp[bi + 1] - sp[bi - 1]).normalized(); bn = sn[bi]; bb = bt.cross(bn).normalized()
+Mb = np.column_stack([np.array(bb), np.array(bt), np.array(bn)])
+def buckle_sdf(p):
+    q = (p - np.array(bp + bn * .008)) @ Mb
+    o_ = odd.sd_box(q, (0, 0, 0), (.029, .016, .0028), None, .0015); i_ = odd.sd_box(q, (0, 0, 0), (.024, .011, .006), None, .001)
+    return np.maximum(o_, -i_)
+buckle = odd.sdf_mesh('Bully_Buckle', buckle_sdf, np.array(bp) - .05, np.array(bp) + .05, .0005)   # 얇은 고리라 리토폴로지 대신 표면을 다듬고 줄인다
+odd.drop_islands(buckle); odd.smooth(buckle, 2, .4); odd.decimate(buckle, .1); buckle.data.shade_smooth()
+# 목걸이: 가는 체인 + 작은 펜던트 (콘셉트 정면)
+neck_pts = [(-6.6, 117.6, 4.2), (-4.8, 112.4, 9.6), (-1.6, 109.0, 12.0), (1.6, 109.0, 12.0), (4.8, 112.4, 9.6), (6.6, 117.6, 4.2), (4.5, 119.6, -3.5), (-4.5, 119.6, -3.5)]
+npts = []
+for q_ in neck_pts:
+    loc, nrm_, _, _ = tbvh.find_nearest(Vector(cmv(*q_))); npts.append(loc + nrm_ * .003)
+chain = odd.curve_tube('Bully_Chain', npts, .0012, res=10, bevel_res=2, closed=True)
+pend = sdf_obj('Bully_Pendant', lambda q: odd.sd_box(q, (0, 107.4, 12.6), (.7, 1.1, .18), None, .15), (-2, 105, 11), (2, 110, 14.5), .0003, 200)
 
 if STAGE in ('head', 'body') and False:
     odd.lookdev_scene('studio', size=1.0)
@@ -520,8 +626,8 @@ if STAGE in ('head', 'body') and False:
     sys.exit(0)
 
 # 면 예산: 조형이 끝난 뒤 큰 메시를 형태를 지키며 줄인다 (잔디테일은 노멀맵)
-BUDGET = {'Bully_Tee': 30000, 'Bully_Jeans': 22000, 'Bully_Head': 24000, 'Bully_Hair': 12000, 'Bully_HairMass': 16000, 'Bully_Cap': 12000,
-          'Bully_GuitarBody': 9000, 'Bully_GuitarNeck': 7000, 'Bully_Hand0': 9000, 'Bully_Hand1': 9000, 'Bully_CapBrim': 3500,
+BUDGET = {'Bully_Tee': 30000, 'Bully_Pants': 24000, 'Bully_Head': 24000, 'Bully_Hair': 12000, 'Bully_HairMass': 16000, 'Bully_Cap': 12000,
+          'Bully_GuitarBody': 9000, 'Bully_GuitarNeck': 7000, 'Bully_Tuners': 4000, 'Bully_Hand0': 9000, 'Bully_Hand1': 9000, 'Bully_CapBrim': 3500,
           'Bully_Shoe0_Upper': 6500, 'Bully_Ear0': 3500, 'Bully_Ear1': 3500}
 for o in list(bpy.data.objects):
     if o.type == 'MESH' and o.name in BUDGET:
@@ -551,6 +657,9 @@ def skin_color(g, seed=0):
     c = c * (1 - .18 * blush[:, None]) + np.array([.86, .45, .42])[None, :] * (.18 * blush[:, None])
     lips = np.exp(-(((g[:, 0]) / 2.6) ** 2 + ((g[:, 1] - 130.6) / .9) ** 2)) * (g[:, 2] > 11.5)
     c = c * (1 - .45 * lips[:, None]) + np.array([.74, .42, .40])[None, :] * (.45 * lips[:, None])
+    for e_ in EYE:                                                                                        # 눈 밑 그늘
+        uh = np.exp(-(((g[:, 0] - e_[0]) / 1.9) ** 2 + ((g[:, 1] - (e_[1] - 1.7)) / .8) ** 2)) * (g[:, 2] > 9)
+        c = c * (1 - .16 * uh[:, None]) + np.array([.55, .42, .47])[None, :] * (.16 * uh[:, None])
     from scipy.spatial import cKDTree
     rs_ = np.random.default_rng(77); fp = []
     while len(fp) < 90:                                                                                      # 주근깨: 코 · 볼 위에 흩어진 작은 점
@@ -576,7 +685,7 @@ for o in ears + [skin] + hands:
         cx = cx * (1 - .08 * knuck[:, None])
     o.data.materials.append(tex.material(o.name + '_M', TD, Sx.img(np.clip(cx, 0, 1)), Sx.img(np.full(len(cx), .56)), tex.h2n(Sx.img(tex.vnoise(gx, 6, seed=7) * .3), .6), sheen=(.25, .5, (1, .85, .8, 1))))
 
-# 눈: 청록 홍채(방사 무늬 · 어두운 테) · 동공 · 반사 · 흰자 가장자리 분홍
+# 눈: 회녹색 홍채(방사 무늬 · 어두운 테) · 동공 · 반사 · 흰자 가장자리 분홍
 for i, (eo, e) in enumerate(zip(eyes, EYE)):
     c = Vector(cmv(*(e + np.array([0, 0, -.75])))); out = Vector((0, -1, 0)); u_ = Vector((1, 0, 0)); v_ = Vector((0, 0, 1))
     uv = eo.data.uv_layers.new(name='UVMap'); a = odd.co(eo)
@@ -587,7 +696,7 @@ for i, (eo, e) in enumerate(zip(eyes, EYE)):
 N_ = 512; yy, xx = (np.mgrid[0:N_, 0:N_] + .5) / N_ - .5; rr_ = np.hypot(xx, yy) / .5; an = np.arctan2(yy, xx)
 img = np.tile(np.array([.93, .9, .88]), (N_, N_, 1)) * (1 - .25 * np.clip((rr_ - .55) / .4, 0, 1))[..., None]
 img = img * (1 - .2 * np.clip((rr_ - .7) / .3, 0, 1)[..., None]) + np.array([.9, .55, .55]) * (.2 * np.clip((rr_ - .7) / .3, 0, 1)[..., None])
-iris = np.array([.22, .45, .5]) * (.7 + .4 * (np.sin(an * 44) * .5 + .5) ** 2)[..., None] * (1 - .55 * np.clip((rr_ - .33) / .1, 0, 1))[..., None]
+iris = np.array([.40, .44, .40]) * (.72 + .38 * (np.sin(an * 44) * .5 + .5) ** 2)[..., None] * (1 - .6 * np.clip((rr_ - .33) / .1, 0, 1))[..., None]   # 회녹색 (콘셉트)
 img = np.where((rr_ < .43)[..., None], iris, img)
 img = np.where((rr_ < .19)[..., None], np.array([.02, .02, .025]), img)
 img = np.where((np.hypot(xx - .07, yy - .09) < .05)[..., None], np.array([.98, .98, .98]), img)
@@ -596,14 +705,15 @@ for eo in eyes: eo.data.materials.append(eyeM)
 
 # 머리카락 · 눈썹: 금발 (뿌리 어둡게 · 끝 밝게)
 for o, nm in ((hairmass, 'Bully_HairMass'), (hair, 'Bully_Hair')):
-    Sx, gx = S_of(o, 1024)
+    Sx, gx = S_of(o, 1024, margin=.016)                                                          # 섬 간격을 넓게: 뿌리(진한)와 끝(밝은) 섬이 밉맵에서 섞여 밝은 테두리가 생기지 않게
     from scipy.spatial import cKDTree
     dm_, _ = cKDTree(gcm(odd.co(hairmass))).query(gx)
     tip = np.clip(dm_ / 3.0, 0, 1) if o is hair else np.clip((141 - gx[:, 1]) / 7, 0, 1)
     strand = tex.vnoise(gx * np.array([6, 1.2, 6]), 1.0, seed=9)
-    cx = np.array([.62, .45, .2])[None, :] * (1 - tip[:, None]) + np.array([.92, .76, .42])[None, :] * tip[:, None]
+    cx = np.array([.58, .43, .22])[None, :] * (1 - tip[:, None]) + np.array([.95, .85, .60])[None, :] * tip[:, None]
     cx *= (.85 + .25 * (strand * .5 + .5))[:, None]
-    o.data.materials.append(tex.material(nm, TD, Sx.img(np.clip(cx, 0, 1)), Sx.img(.45 + .1 * strand), tex.h2n(Sx.img(strand * .5), 1.0), sheen=(.5, .35, (1, .9, .7, 1))))
+    hb = tex.bump(Sx, lambda p_, n_: tex.vnoise(gcm(p_) * np.array([6, 1.2, 6]), 1.0, seed=9) * .5, .0008, 1.0)   # 섬 경계에 줄이 생기지 않는 3D 미분 노멀
+    o.data.materials.append(tex.material(nm, TD, Sx.img(np.clip(cx, 0, 1)), Sx.img(.45 + .1 * strand), hb, sheen=(.5, .35, (1, .9, .7, 1)), double=True))
 browM = odd.gltf_material('Bully_Brow', base_value=(.5, .35, .17, 1), rough_value=.6)
 for o in brows: o.data.materials.append(browM)
 
@@ -621,7 +731,11 @@ for k in range(6):
         hh += np.clip(1 - np.abs(d - abs(off)) / .05, 0, 1) * (np.sin(s_ * 18) > -.2)
     vent = topg + (e - topg) * .32 + (np.cross(e - topg, gc[:, :3].mean(0) - topg) * 0)
     hh -= np.exp(-np.sum((gc - (topg + (e - topg) * .3 + np.array([math.cos(a), 0, -math.sin(a)]) * 1.6)) ** 2, 1) / .06) * 2.5
-ccol = np.array([.42, .065, .1])[None, :] * (.9 + .15 * tex.fbm(gc, .6, 3, seed=31))[:, None]
+ccol = np.array([.50, .09, .085])[None, :] * (.9 + .15 * tex.fbm(gc, .6, 3, seed=31))[:, None]
+sunb = np.clip((gc[:, 1] - 146) / 6, 0, 1) * np.clip(tex.fbm(gc, .35, 3, seed=36) * 1.2 + .5, 0, 1)        # 햇빛에 바랜 꼭대기
+ccol = ccol * (1 - .45 * sunb[:, None]) + np.array([.66, .32, .26])[None, :] * (.45 * sunb[:, None])
+dust_c = np.clip(tex.fbm(gc, 1.5, 4, seed=37) * 1.6 - .5, 0, 1)
+ccol = ccol * (1 - .25 * dust_c[:, None]) + np.array([.45, .36, .3])[None, :] * (.25 * dust_c[:, None])
 ccol *= (1 - .45 * np.clip(-hh, 0, 1) * 0)[:, None]
 vents = np.zeros(len(gc))
 for k in range(6):
@@ -640,31 +754,34 @@ dout, _ = tex.polyline_dist(gb, outer)
 rows_ = np.zeros(len(gb))
 for k in range(1, 7):                                                                                 # 바깥 가장자리를 따라가는 박음질 줄
     rows_ += np.clip(1 - np.abs(dout - k * .85) / .06, 0, 1)
-bcol = np.where(upf[:, None], np.array([.42, .065, .1]), np.array([.12, .15, .12]))
+fray = np.clip(1 - dout / .5, 0, 1) * np.clip(tex.fbm(gb, 2.0, 3, seed=38) + .3, 0, 1)                        # 챙 가장자리 닳음
+bcol = np.where(upf[:, None], np.array([.50, .09, .085]), np.array([.12, .13, .11]))
+bcol = bcol * (1 - .5 * fray[:, None]) + np.array([.62, .45, .38])[None, :] * (.5 * fray[:, None])
 brim_m = tex.material('Bully_Brim', TD, Sb.img(bcol), Sb.img(np.full(len(gb), .8)), tex.h2n(Sb.img(rows_ * upf * .6 + tex.vnoise(gb, 9.0, seed=35) * .05), 1.4))
 brim.data.materials.append(brim_m)
-snap.data.materials.append(odd.gltf_material('Bully_Snap', base_value=(.04, .04, .045, 1), rough_value=.35))
+snap.data.materials.append(odd.gltf_material('Bully_Snap', base_value=(.26, .14, .07, 1), rough_value=.55))   # 갈색 가죽 조절 띠
 
-# 티: 검정 면 저지 · 주름 위가 살짝 바랜 · 앞 프린트(해골 + 엇갈린 플라잉V + NOISE!) · 목 립
+# 티: 빛바랜 검정 면 저지 · 주름 위가 바랜 · 구멍 · 앞 프린트(해골 + 흰 가시 + 빨간 물감 — 콘셉트) · 목 립
 P_ = 1024; pim = Image.new('RGBA', (P_, P_), (0, 0, 0, 0)); dr = ImageDraw.Draw(pim)
 W_ = (238, 232, 220, 255); R_ = (196, 30, 32, 255)
-for sgn in (-1, 1):                                                                                  # 엇갈린 플라잉V
-    cx_, cy_ = 512, 470
-    for t in range(-260, 261, 2):
-        x = cx_ + sgn * t * .78; y = cy_ - t * .62
-        dr.ellipse([x - 9, y - 9, x + 9, y + 9], fill=R_)
-    hx, hy = cx_ + sgn * 260 * .78, cy_ - 260 * .62
-    dr.polygon([(hx, hy), (hx + sgn * 40, hy - 70), (hx + sgn * 70, hy - 40)], fill=R_)
-    bx, by = cx_ - sgn * 220 * .78, cy_ + 220 * .62
-    dr.polygon([(bx, by), (bx - sgn * 120, by + 40), (bx - sgn * 90, by + 110), (bx + sgn * 10, by + 30)], fill=R_)
-dr.ellipse([352, 250, 672, 560], fill=W_)                                                           # 해골
-dr.rectangle([420, 520, 604, 640], fill=W_)
-for ex in (440, 584):
-    dr.ellipse([ex - 52, 360, ex + 52, 470], fill=(10, 10, 12, 255))
-dr.polygon([(512, 480), (488, 530), (536, 530)], fill=(10, 10, 12, 255))
-for tx in range(440, 600, 32):
-    dr.rectangle([tx, 590, tx + 14, 640], fill=(10, 10, 12, 255))
-fnt = ImageFont.truetype(FB, 150); tw = dr.textlength('NOISE!', font=fnt); dr.text((512 - tw / 2, 700), 'NOISE!', font=fnt, fill=R_)
+rsp = np.random.default_rng(23)
+for k in range(26):                                                                                  # 흰 가시 · 튄 조각 (해골 둘레로 뻗는다)
+    a = rsp.uniform(0, TAU); L = rsp.uniform(150, 330); wdt = rsp.uniform(10, 26)
+    x0, y0 = 512 + math.cos(a) * 120, 430 + math.sin(a) * 120; x1, y1 = 512 + math.cos(a) * L, 430 + math.sin(a) * L
+    nx, ny = -math.sin(a), math.cos(a)
+    dr.polygon([(x0 + nx * wdt, y0 + ny * wdt), (x1, y1), (x0 - nx * wdt, y0 - ny * wdt)], fill=(205, 200, 190, 255))
+for k in range(70):                                                                                  # 빨간 물감 방울 · 흘러내림
+    a = rsp.uniform(0, TAU); r0 = rsp.uniform(60, 300); x, y = 512 + math.cos(a) * r0, 440 + math.sin(a) * r0 * 1.15; rr = rsp.uniform(6, 34)
+    dr.ellipse([x - rr, y - rr * rsp.uniform(.7, 1.3), x + rr, y + rr * rsp.uniform(.7, 1.3)], fill=R_)
+    if rsp.random() < .35: dr.rectangle([x - rr * .25, y, x + rr * .25, y + rsp.uniform(40, 140)], fill=R_)
+dr.ellipse([362, 270, 662, 560], fill=W_)                                                           # 해골
+dr.rectangle([428, 520, 596, 636], fill=W_)
+for ex in (448, 576):
+    dr.ellipse([ex - 50, 372, ex + 50, 474], fill=(10, 10, 12, 255))
+    dr.ellipse([ex - 16, 404, ex + 16, 440], fill=R_)                                                # 빨간 눈 빛
+dr.polygon([(512, 486), (490, 532), (534, 532)], fill=(10, 10, 12, 255))
+for tx in range(440, 600, 30):
+    dr.rectangle([tx, 590, tx + 13, 636], fill=(10, 10, 12, 255))
 parr = np.asarray(pim).astype(float) / 255
 crack = (tex.vnoise(np.stack([np.repeat(np.arange(P_), P_) / 18., np.tile(np.arange(P_), P_) / 18., np.zeros(P_ * P_)], 1), 1.0, seed=3).reshape(P_, P_) > .62)
 parr[..., 3] *= np.where(crack, .25, 1.0)                                                            # 갈라진 프린트
@@ -675,7 +792,9 @@ inb = front & (u_p > 0) & (u_p < 1) & (v_p > 0) & (v_p < 1)
 pi = np.clip((v_p * (P_ - 1)).astype(int), 0, P_ - 1); pj = np.clip((u_p * (P_ - 1)).astype(int), 0, P_ - 1)
 pr = parr[pi, pj]; pa = pr[:, 3] * inb
 fold_hi = np.clip(tex.fbm(gt, .2, 3, seed=6) * .8, 0, 1)
-tcol = np.array([.035, .035, .04])[None, :] * (1 + .5 * fold_hi)[:, None] + np.array([.03, .03, .035])[None, :] * np.clip(tex.fbm(gt, 1.2, 3, seed=7), 0, 1)[:, None]
+tcol = np.array([.095, .09, .095])[None, :] * (1 + .7 * fold_hi)[:, None] + np.array([.06, .055, .055])[None, :] * np.clip(tex.fbm(gt, 1.2, 3, seed=7), 0, 1)[:, None]   # 빨아서 바랜 검정
+holes = np.clip(tex.fbm(gt, 1.1, 3, seed=19) * 2.2 - 1.55, 0, 1) * (np.abs(gt[:, 1] - 80) < 9)                 # 밑단 쪽 작은 구멍 · 해짐
+tcol = tcol * (1 - .7 * holes[:, None])
 tcol = tcol * (1 - pa[:, None]) + pr[:, :3] * .82 * pa[:, None]
 knit = (np.sin(gt[:, 0] * 70) * .5 + .5) * .25 + tex.vnoise(gt, 25, seed=2) * .1
 tee_m = tex.material('Bully_Tee', TD, St.img(np.clip(tcol, 0, 1)), St.img(.86 - .35 * pa), tex.h2n(St.img(knit + pa * .2), 1.0), sheen=(.5, .6, (.5, .5, .55, 1)))
@@ -683,41 +802,53 @@ tee.data.materials.append(tee_m)
 Sr, gr = S_of(neckrib, 512)
 neckrib.data.materials.append(tex.material('Bully_TeeRib', TD, Sr.img(np.tile([.04, .04, .045], (len(gr), 1))), Sr.img(np.full(len(gr), .88)), tex.h2n(Sr.img(np.sin(np.arctan2(gr[:, 2] - 1.2, gr[:, 0]) * 120) * .5), 1.4)))
 
-# 청바지: 인디고 능직 · 허벅지 앞 · 무릎 바램 · 사타구니 수염 주름 · 금색 박음질(옆선 · 안쪽선 · 뒷주머니) · 리벳
+# 카고 바지: 차콜 · 검정 능직 — 허벅지 · 무릎 바램, 무릎 해짐(구멍 · 실밥), 밑단 흙먼지, 박음질 · 카고 주머니 테 (콘셉트)
 Sj, gj = S_of(jeans, 2048)
 tw_ = np.sin((gj[:, 0] * .7 + gj[:, 1]) * 26 + tex.vnoise(gj, 2, seed=1) * .6) * .5
-fade = np.zeros(len(gj))
+fade = np.zeros(len(gj)); rip = np.zeros(len(gj))
 for s in (0, 1):
-    fade += np.exp(-(((gj[:, 0] - KNE[s][0]) / 4.5) ** 2 + ((gj[:, 1] - 52) / 12) ** 2)) * (gj[:, 2] > 0) * .8
-    fade += np.exp(-(((gj[:, 0] - KNE[s][0]) / 4) ** 2 + ((gj[:, 1] - 43) / 4) ** 2)) * .6
-whisk = np.zeros(len(gj))
-for s in (-1, 1):
-    for k in range(4):
-        d, _ = tex.seg_dist(gj, (s * 2, 70 - k * 1.5, 9.5), (s * 9, 66 - k * 2.2, 8.5)); whisk = np.maximum(whisk, np.exp(-(d / .35) ** 2))
-jcol = np.array([.10, .14, .27])[None, :] * (1 + .25 * tw_)[:, None]
-jcol = jcol * (1 - (fade * .55 + whisk * .4)[:, None]) + np.array([.42, .5, .62])[None, :] * (fade * .55 + whisk * .4)[:, None]
+    fade += np.exp(-(((gj[:, 0] - KNE[s][0]) / 5.5) ** 2 + ((gj[:, 1] - 55) / 13) ** 2)) * (gj[:, 2] > 0) * .7
+    fade += np.exp(-(((gj[:, 0] - KNE[s][0]) / 4.5) ** 2 + ((gj[:, 1] - 43) / 5) ** 2)) * .6
+    kc = np.array([KNE[s][0] + (1.5 if s else -1.5), 41.5 + 2.5 * s, 8.5])
+    rip = np.maximum(rip, np.clip(1 - np.sum(((gj - kc) / np.array([2.6, 1.5, 6])) ** 2, 1), 0, 1))
+fade += .45 * np.clip(tex.fbm(gj, .25, 3, seed=14) * 1.4, 0, 1)
+dirt = np.clip((24 - gj[:, 1]) / 12, 0, 1) * np.clip(tex.fbm(gj, .8, 3, seed=15) + .6, 0, 1)
+jcol = np.array([.20, .195, .20])[None, :] * (1 + .25 * tw_)[:, None]                               # 빨아서 바랜 차콜 (콘셉트)
+jcol = jcol * (1 - (fade * .6)[:, None]) + np.array([.38, .36, .33])[None, :] * (fade * .6)[:, None]
+jcol = jcol * (1 - (dirt * .45)[:, None]) + np.array([.30, .25, .19])[None, :] * (dirt * .45)[:, None]
+threads = (np.sin(gj[:, 0] * 9 + tex.vnoise(gj, 4, seed=16) * 2) > .3) * (rip > .05) * (rip < .55)
+jcol = np.where((rip > .55)[:, None], np.array([.80, .62, .52]) * .55, jcol)                       # 구멍 (안쪽 그늘 · 살)
+jcol = np.where(threads[:, None], np.array([.62, .6, .56]), jcol)                                   # 해진 실밥
 seamh = np.zeros(len(gj))
 for s in (0, 1):
-    sg = np.sign(HIP[s][0])
-    outer = np.abs(gj[:, 0] - sg * (np.interp(gj[:, 1], [16, 42, 75], [5.6 + 5.4, 6.5 + 6.6, 7.8 + 8.6]) * 1)) < .25
-    seamh += outer * (gj[:, 2] > -1) * (gj[:, 2] < 1)
-    pk = (np.abs(np.abs(gj[:, 0] - sg * 6.5) - 4.2) < .12) | (np.abs(gj[:, 1] - 77) < .12)
-    seamh += pk * (gj[:, 2] < -6) * (gj[:, 1] > 66) * (gj[:, 1] < 79) * (np.abs(gj[:, 0] - sg * 6.5) < 4.3)
-stitch = np.clip(seamh, 0, 1) * (np.sin((gj[:, 1] + gj[:, 0]) * 9) > 0)
-jcol = jcol * (1 - stitch[:, None]) + np.array([.78, .58, .24])[None, :] * stitch[:, None]
-jeans_m = tex.material('Bully_Jeans', TD, Sj.img(np.clip(jcol, 0, 1)), Sj.img(.82 + .05 * tw_), tex.h2n(Sj.img(tw_ * .5 + seamh * .4), 1.2))
+    sg = np.sign(HIP[s][0]); pc = pocket_c(s)
+    edge_p = (np.abs(np.abs(gj[:, 2] - pc[2]) - 4.0) < .14) & (np.abs(gj[:, 1] - pc[1]) < 5.2) | (np.abs(gj[:, 1] - (pc[1] - 5.1)) < .14) & (np.abs(gj[:, 2] - pc[2]) < 4.0)
+    flap = (np.abs(gj[:, 1] - (pc[1] + 4.4)) < .14) & (np.abs(gj[:, 2] - pc[2]) < 4.5)
+    side_ = (sg * gj[:, 0] > 9) & (np.abs(gj[:, 2] - .5) < .2)
+    seamh += (edge_p | flap) * (sg * gj[:, 0] > 10) + side_
+    pk = (np.abs(np.abs(gj[:, 0] - sg * 6.8) - 4.4) < .12) | (np.abs(gj[:, 1] - 76) < .12)
+    seamh += pk * (gj[:, 2] < -6) * (gj[:, 1] > 64) * (gj[:, 1] < 77) * (np.abs(gj[:, 0] - sg * 6.8) < 4.5)
+stitch = np.clip(seamh, 0, 1) * (np.sin((gj[:, 1] + gj[:, 0] + gj[:, 2]) * 9) > 0)
+jcol = jcol * (1 - .6 * stitch[:, None]) + np.array([.30, .29, .27])[None, :] * (.6 * stitch[:, None])
+jeans_m = tex.material('Bully_Pants', TD, Sj.img(np.clip(jcol, 0, 1)), Sj.img(.86 + .05 * tw_ - .1 * dirt), tex.h2n(Sj.img(tw_ * .5 + seamh * .4 - rip * .8), 1.2))
 jeans.data.materials.append(jeans_m)
-cuffM = tex.material('Bully_Cuff', TD, *(lambda S_, g_: (S_.img(np.array([.24, .3, .45])[None, :] * (1 + .2 * np.sin((g_[:, 0] + g_[:, 1]) * 26))[:, None]), S_.img(np.full(len(g_), .85)), tex.h2n(S_.img(np.sin((g_[:, 0] + g_[:, 1]) * 26) * .5), 1.2)))(*S_of(cuffs[0], 512)))
-for o in cuffs:
-    if not o.data.uv_layers: odd.uv_smart(o, 60, .004)
-    o.data.materials.append(cuffM)
 
-# 손목 밴드: 빨간 테리 (고리 결)
-Sw, gw = S_of(bands[0], 512)
-terry = tex.vnoise(gw, 7.0, seed=8)
-bandM = tex.material('Bully_Band', TD, Sw.img(np.array([.66, .07, .07])[None, :] * (.85 + .25 * terry)[:, None]), Sw.img(np.full(len(gw), .92)), tex.h2n(Sw.img(terry), 1.6), sheen=(.6, .5, (1, .6, .6, 1)))
-odd.uv_smart(bands[1], 60, .004)
-for o in bands: o.data.materials.append(bandM)
+# 손목: 갈색 가죽 커프 (가장자리 박음질 · 주름 · 닳음 · 금속 징) — 콘셉트
+for bi_, o in enumerate(bands):
+    Sw, gw = S_of(o, 512)
+    w_, d_, b_, t_ = hand_frame(bi_); cw = w_ - d_ * 2.4
+    along_ = (gw - cw) @ d_
+    edge_b = np.clip(1 - (2.2 - np.abs(along_)) / .35, 0, 1)
+    stw = (np.abs(np.abs(along_) - 1.8) < .1) * (np.sin(np.arctan2((gw - cw) @ t_, (gw - cw) @ b_) * 30) > 0)
+    studs = np.zeros(len(gw))
+    if bi_ == 1:
+        for k in range(8):
+            ang_ = TAU * k / 8; sc_ = cw + (b_ * math.cos(ang_) + t_ * math.sin(ang_)) * 3.8
+            studs = np.maximum(studs, np.clip(1 - np.linalg.norm(gw - sc_, axis=1) / .45, 0, 1))
+    leather = tex.fbm(gw, 3.0, 4, seed=8 + bi_)
+    bc = np.array([.24, .13, .07])[None, :] * (.85 + .3 * leather)[:, None] * (1 - .35 * edge_b)[:, None] + np.array([.5, .4, .3])[None, :] * (.25 * stw)[:, None]
+    bc = np.where((studs > .2)[:, None], np.array([.72, .72, .74]), bc)
+    o.data.materials.append(tex.material(f'Bully_Band{bi_}', TD, Sw.img(np.clip(bc, 0, 1)), Sw.img(np.where(studs > .2, .25, .62 - .1 * leather)), tex.h2n(Sw.img(leather * .3 + studs * 1.2 - stw * .3), 1.4)))
 
 # 신발
 o_s = np.array(cmv(ANK[0][0], 0, 2.4))
@@ -728,38 +859,65 @@ shoe.paint(shoesB0, slB, fwdB, TD, 'Bully', scale=SC, H=3.9, collar_y=-.9)
 for k in list(shoesB1):
     odd.delete(shoesB1[k]); shoesB1[k] = odd.mirror_copy(shoesB0[k], shoesB0[k].name.replace('Shoe0', 'Shoe1'))
 
-# 기타: 빨간 유광 몸통(모서리 닳음) · 메이플 넥 + 로즈우드 지판(프렛 · 점 인레이) · 검정 헤드 · 크롬 · 검정 픽업
+# 기타 (콘셉트): 닳은 빨강 유광 — 모서리 · 팔 닿는 곳은 칠이 벗겨져 밝은 나무, 잔 긁힘 · 찍힘, 아래 둘레에 둥근 ODD 스티커 /
+#       흰 3겹 픽가드(긁힘) / 메이플 넥 + 로즈우드 지판(프렛 · 점) / 메이플 헤드 / 크롬 브리지 · 페그 / 검정 픽업 / 크림 노브
 Sg, gg = S_of(gbody, 2048)
 u, a, w = to_g(gg)
-edge = np.clip(1 - np.abs(sd_poly2(u, a, BODY_P)) / .6, 0, 1)
-wear = edge * np.clip(tex.fbm(gg, 1.5, 3, seed=12) + .2, 0, 1)
-gcol = np.array([.62, .03, .035])[None, :] * (1 + .06 * tex.fbm(gg, .4, 2, seed=11))[:, None] * (1 - .25 * wear[:, None]) + wear[:, None] * np.array([.12, .08, .06])
-gbody.data.materials.append(tex.material('Bully_GuitarBody', TD, Sg.img(np.clip(gcol, 0, 1)), Sg.img(.22 + .3 * wear), None, coat=(1, .06)))
+dpoly = sd_poly2(u, a, BODY_P)
+edge = np.clip(1 - np.abs(dpoly) / .9, 0, 1) * np.clip(tex.fbm(gg, 1.2, 3, seed=12) * 1.4 + .25, 0, 1)
+arm = np.clip(1 - np.hypot(u - 12.5, a + 26) / 6, 0, 1) * (w > 0) * np.clip(tex.fbm(gg, .9, 3, seed=13) + .5, 0, 1)   # 팔이 닿아 벗겨진 곳
+bare = np.clip(edge * 1.3 + arm * .9 - .35, 0, 1)
+scr = np.clip(tex.fbm(gg * np.array([1, 6, 1]), 2.4, 3, seed=17) * 1.8 - 1.0, 0, 1) * .6
+stk_c = np.array([-7.8, -36.8]); rst = np.hypot(u - stk_c[0], a - stk_c[1])
+sticker = (rst < 2.6) & (w > 0)
+wood = np.array([.80, .62, .40])[None, :] * (1 + .08 * np.sin(a * 3.0 + tex.vnoise(gg, 1.5, seed=18) * 2))[:, None]
+gcol = np.array([.60, .045, .04])[None, :] * (1 + .07 * tex.fbm(gg, .4, 2, seed=11))[:, None] * (1 - .2 * scr)[:, None]
+gcol = gcol * (1 - bare[:, None]) + wood * bare[:, None]
+from PIL import Image as _I, ImageDraw as _D, ImageFont as _F
+sim = _I.new('RGB', (256, 256), (236, 230, 216)); sd_ = _D.Draw(sim); sd_.ellipse([10, 10, 246, 246], outline=(180, 30, 30), width=14)
+f_ = _F.truetype(FB, 78); tw_s = sd_.textlength('ODD', font=f_); sd_.text((128 - tw_s / 2, 82), 'ODD', font=f_, fill=(180, 30, 30))
+sar = np.asarray(sim).astype(float) / 255
+si = np.clip(((stk_c[1] + 2.6 - a) / 5.2 * 255).astype(int), 0, 255); sj = np.clip(((u - stk_c[0] + 2.6) / 5.2 * 255).astype(int), 0, 255)
+scol = sar[si, sj] * (1 - .3 * np.clip(tex.fbm(gg, 3, 3, seed=19) + .2, 0, 1))[:, None]
+gcol = np.where(sticker[:, None], scol, gcol)
+gbody.data.materials.append(tex.material('Bully_GuitarBody', TD, Sg.img(np.clip(gcol, 0, 1)), Sg.img(np.clip(.2 + .45 * bare + .25 * scr + .4 * sticker, 0, 1)), tex.h2n(Sg.img(-bare * .4 - scr * .5), 1.0), coat=(1, .06)))
+Spg, gpg = S_of(pickguard, 1024)
+pgs = np.clip(tex.fbm(gpg * np.array([3, 1, 3]), 3.0, 3, seed=27) * 1.6 - .7, 0, 1)
+pu_, pa_, pw_ = to_g(gpg); ply = np.clip(1 - np.abs(sd_poly2(pu_, pa_, PG_P)) / .12, 0, 1)
+pgc = np.array([.90, .88, .82])[None, :] * (1 - .12 * pgs)[:, None] * (1 - .55 * ply)[:, None]      # 가장자리 검은 겹
+pickguard.data.materials.append(tex.material('Bully_Pickguard', TD, Spg.img(np.clip(pgc, 0, 1)), Spg.img(.28 + .3 * pgs), tex.h2n(Spg.img(-pgs * .4), .8), coat=(.6, .1)))
 Sn_, gn = S_of(gneck, 1024)
 u, a, w = to_g(gn)
-board = (w < -1.4) & (a < 33) & (a > -4)
-frets = np.zeros(len(gn))
-for kf in range(1, 23):
-    pos = 33 - 33 * (1 - 2 ** (-kf / 12)) * 1.45
-    frets = np.maximum(frets, (np.abs(a - pos) < .07).astype(float))
+board = (w > 2.25) & (a < 34.1) & (a > -4)
+frets = np.zeros(len(gn)); SCL = 64.8
+for kf in range(1, 22):
+    pos = 34 - SCL * (1 - 2 ** (-kf / 12))
+    if pos > -3.6: frets = np.maximum(frets, (np.abs(a - pos) < .07).astype(float))
 dots = np.zeros(len(gn))
-for kf in (3, 5, 7, 9, 12, 15, 17):
-    pos = 33 - 33 * (1 - 2 ** (-(kf - .5) / 12)) * 1.45
-    dots = np.maximum(dots, (np.hypot(u, a - pos) < .32).astype(float))
-headf = (a > 33) & (w < -.9)
-ncol = np.where(board[:, None], np.array([.13, .07, .045]), np.array([.62, .38, .2]))
-ncol = np.where((board & (frets > 0))[:, None], np.array([.78, .76, .72]), ncol)
-ncol = np.where((board & (dots > 0))[:, None], np.array([.9, .88, .82]), ncol)
-ncol = np.where(headf[:, None], np.array([.03, .03, .035]), ncol)
-gneck.data.materials.append(tex.material('Bully_GuitarNeck', TD, Sn_.img(ncol), Sn_.img(np.where(board, .55, .25) - .3 * frets), tex.h2n(Sn_.img(frets * .8), 1.0), coat=(.6, .1)))
-chrome = odd.gltf_material('Bully_Chrome', base_value=(.85, .85, .87, 1), rough_value=.18, metal_value=1.0)
+for kf in (3, 5, 7, 9, 12, 15, 17, 19):
+    pos = 34 - SCL * (1 - 2 ** (-(kf - .5) / 12))
+    for du in ((-.9, .9) if kf == 12 else (0,)):
+        dots = np.maximum(dots, (np.hypot(u - du, a - pos) < .3).astype(float))
+headf = (a > 34) & (w > 1.9)
+maple = np.array([.86, .66, .40])[None, :] * (1 + .06 * np.sin(a * 2.2 + tex.vnoise(gn, 1.0, seed=29) * 3))[:, None]
+ncol = np.where(board[:, None], np.array([.16, .085, .05]), maple)
+ncol = np.where((board & (frets > 0))[:, None], np.array([.80, .78, .74]), ncol)
+ncol = np.where((board & (dots > 0))[:, None], np.array([.92, .90, .84]), ncol)
+ncol = np.where((headf & (np.hypot(u - .2, a - 41.5) < 1.1))[:, None], np.array([.04, .04, .04]), ncol)   # 헤드 작은 로고
+gneck.data.materials.append(tex.material('Bully_GuitarNeck', TD, Sn_.img(np.clip(ncol, 0, 1)), Sn_.img(np.where(board, .55, .3) - .3 * frets), tex.h2n(Sn_.img(frets * .8), 1.0), coat=(.7, .1)))
+chrome = odd.gltf_material('Bully_Chrome', base_value=(.85, .85, .87, 1), rough_value=.2, metal_value=1.0)
 blackp = odd.gltf_material('Bully_PickupBlack', base_value=(.03, .03, .035, 1), rough_value=.35)
 for o in pick: o.data.materials.append(blackp)
-for o in (bridge, tailp, gstrings): o.data.materials.append(chrome)
-for o in knobs: o.data.materials.append(odd.gltf_material('Bully_Knob', base_value=(.05, .04, .03, 1), rough_value=.3))
+for o in (bridge, tailp, gstrings, tuners, buckle): o.data.materials.append(chrome)
+cream = odd.gltf_material('Bully_Knob', base_value=(.86, .82, .70, 1), rough_value=.3)
+for o in knobs: o.data.materials.append(cream)
+silver = odd.gltf_material('Bully_Silver', base_value=(.62, .62, .64, 1), rough_value=.3, metal_value=1.0)
+for o in (chain, pend): o.data.materials.append(silver)
 Ss_, gs_ = S_of(strap, 1024)
+lth = tex.fbm(gs_, 1.5, 4, seed=21)
 st_edge = np.zeros(len(gs_))
-strapM = tex.material('Bully_Strap', TD, Ss_.img(np.array([.05, .045, .045])[None, :] * (1 + .3 * tex.fbm(gs_, .8, 3, seed=21))[:, None]), Ss_.img(np.full(len(gs_), .55)), tex.h2n(Ss_.img(tex.vnoise(gs_, 6, seed=22) * .3), .8))
+scol_ = np.array([.33, .17, .08])[None, :] * (.8 + .35 * (lth * .5 + .5))[:, None]
+strapM = tex.material('Bully_Strap', TD, Ss_.img(np.clip(scol_, 0, 1)), Ss_.img(.5 + .12 * lth), tex.h2n(Ss_.img(lth * .3 + tex.vnoise(gs_, 6, seed=22) * .2), .8))
 strap.data.materials.append(strapM)
 
 # =====================================================================================

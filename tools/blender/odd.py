@@ -946,6 +946,7 @@ def retopo(dense, faces=3000, subdiv=1, name=None):
     shrinkwrap(lo, dense, mode='NEAREST_SURFACEPOINT')
     smooth(lo, 1, .25)
     shrinkwrap(lo, dense, mode='NEAREST_SURFACEPOINT')
+    recalc(lo)                                     # 얇은 곳(머리 다발 등)은 감싸 붙이면서 면이 뒤집힐 수 있다 — 웹 뷰어(한 면만 그림)에서 구멍처럼 사라진다
     lo.data.shade_smooth()
     return lo
 

@@ -156,7 +156,10 @@ harp = odd.curve_tube('Lounge_LampHarp', [Vector((LX - .07, LY, LZ + .3)), Vecto
 bulb = sdf_obj('Lounge_LampBulb', lambda p: sm(E_(p, (LX, LY, LZ + .41), (.03, .03, .036)), S_(p, (LX, LY, LZ + .36), (LX, LY, LZ + .385), .013, .013), .01),
                (LX - .04, LY - .04, LZ + .34), (LX + .04, LY + .04, LZ + .46), .0012, 400, subdiv=0)
 prof = [(.105, .345), (.108, .342), (.112, .345), (.111, .35), (.085, .51), (.083, .515), (.086, .519), (.089, .515)]   # 아래 테 말림 → 옆면 → 위 테 말림
-rings = [[Vector((LX + r * math.cos(TAU * k / 48), LY + r * math.sin(TAU * k / 48), LZ + z)) for k in range(48)] for r, z in prof]
+NPL = 26                                                                                       # 주름 수 (콘셉트: 주름 잡힌 호박색 천 갓)
+def _pleat(t):
+    return (abs(math.sin(t * NPL * math.pi)) - .64) * .045
+rings = [[Vector((LX + r * (1 + _pleat(k / 208) * (1 if .2 < z < .51 else .25)) * math.cos(TAU * k / 208), LY + r * (1 + _pleat(k / 208) * (1 if .2 < z < .51 else .25)) * math.sin(TAU * k / 208), LZ + z)) for k in range(208)] for r, z in prof]
 shade = odd.loft('Lounge_LampShade', rings); odd.solidify(shade, .0018, offset=-1); odd.subsurf(shade, 1)
 
 # =====================================================================================
@@ -219,7 +222,7 @@ glass = odd.mesh_obj('Lounge_Glass', [(WIN[0], WALL_Y + .035, WIN[2]), (WIN[1], 
 # 6. 커튼: 주름 잡힌 천(위 고정) → 천 시뮬레이션으로 무겁게 늘어뜨림 · 고르지 않은 밑단 + 놋쇠 봉 · 고리 · 끝 장식
 # =====================================================================================
 RODZ = 2.08
-def curtain(name, x0, x1, seed):
+def curtain(name, x0, x1, seed, yb=.12, ampk=1.0):
     r_ = np.random.default_rng(seed); cols, rows = 46, 44; verts = []; faces = []
     ph = np.cumsum(r_.uniform(.6, 1.4, 12)); ph = ph / ph[-1] * 5.0; amp = r_.uniform(.025, .06, 12)
     for r in range(rows):
@@ -227,7 +230,7 @@ def curtain(name, x0, x1, seed):
         for c in range(cols):
             u = c / (cols - 1); x = x0 + (x1 - x0) * u
             kk = min(11, int(np.searchsorted(ph, u * 5.0)))                                # 불규칙한 주름 (간격 · 깊이 제각각)
-            y = WALL_Y - .12 - amp[kk] * math.sin(np.interp(u * 5.0, np.concatenate([[0], ph]), np.arange(13) * math.pi)) * (1 - .35 * t) + .01 * math.sin(t * 5 + seed)
+            y = WALL_Y - yb - ampk * amp[kk] * math.sin(np.interp(u * 5.0, np.concatenate([[0], ph]), np.arange(13) * math.pi)) * (1 - .35 * t) + .01 * math.sin(t * 5 + seed)
             verts.append((x, y, z))
     for r in range(rows - 1):
         for c in range(cols - 1):
@@ -243,7 +246,8 @@ floor_c = odd.mesh_obj('_floorcol', [(-3, -3, 0), (3, -3, 0), (3, 3, 0), (-3, 3,
 wall_c = odd.mesh_obj('_wallcol', [(-3, WALL_Y, 0), (3, WALL_Y, 0), (3, WALL_Y, 3), (-3, WALL_Y, 3)], [(0, 1, 2, 3)])
 cur_l = curtain('Lounge_CurtainL', WIN[0] - .3, WIN[0] + .1, 3)
 cur_r = curtain('Lounge_CurtainR', WIN[1] - .1, WIN[1] + .28, 4)
-for o in (cur_l, cur_r):
+sheer = curtain('Lounge_Sheer', WIN[0] - .02, WIN[1] + .02, 7, yb=.055, ampk=.35)                 # 창 안쪽 얇은 레이스 (콘셉트)
+for o in (cur_l, cur_r, sheer):
     odd.cloth_sim(o, frames=55, pin_group='pin', colliders=[floor_c, wall_c], quality=7, mass=.6, tension=25, bending=6, collide_dist=.004, thickness_outer=.004)
     odd.solidify(o, .004, offset=-1); odd.subsurf(o, 1)
 odd.delete(floor_c); odd.delete(wall_c)
@@ -253,6 +257,47 @@ for xx in (WIN[0] - .38, WIN[1] + .36):
     fin.append(sdf_obj('_fin', (lambda p, xx=xx: sm(E_(p, (xx, WALL_Y - .12, RODZ), (.03, .03, .03)), S_(p, (xx + np.sign(xx) * .0, WALL_Y - .12, RODZ), (xx + np.sign(xx - .7) * .03, WALL_Y - .12, RODZ), .012, .02), .01)),
                        (xx - .05, WALL_Y - .17, RODZ - .05), (xx + .05, WALL_Y - .07, RODZ + .05), .0015, 300))
 finials = odd.join(fin, 'Lounge_RodFinials')
+
+# ---------- 액자: 소파 위 벽에 조금 비뚤게 걸린 낡은 금박 액자 2개 + 그림 판 (콘셉트: 그림이 많이 걸린 어두운 벽) ----------
+FRAMES = [(-.64, 1.36, .36, .46, .02), (-.12, 1.30, .30, .36, -.015)]
+frames_, pics = [], []
+for k, (fx, fz, fw, fh, rot) in enumerate(FRAMES):
+    cr, sr_ = math.cos(rot), math.sin(rot); Rf = np.array([[cr, 0, -sr_], [0, 1, 0], [sr_, 0, cr]])
+    def ffn(p, fx=fx, fz=fz, fw=fw, fh=fh, Rf=Rf):
+        q = (p - np.array([fx, WALL_Y - .018, fz])) @ Rf
+        outer = B_(q, (0, 0, 0), (fw / 2, .016, fh / 2), None, .006)
+        inner = B_(q, (0, -.02, 0), (fw / 2 - .045, .03, fh / 2 - .045), None, .003)
+        bead = B_(q, (0, -.012, 0), (fw / 2 - .02, .006, fh / 2 - .02), None, .004)               # 안쪽 테 (몰딩 단)
+        return sx_(sm(outer, bead, .006), -inner, .004)
+    frames_.append(sdf_obj(f'_frame{k}', ffn, (fx - fw / 2 - .05, WALL_Y - .06, fz - fh / 2 - .05), (fx + fw / 2 + .05, WALL_Y + .01, fz + fh / 2 + .05), .002, 1200, subdiv=0))
+    hw_, hh_ = fw / 2 - .043, fh / 2 - .043
+    corners = [np.array([-hw_, -.006, -hh_]), np.array([hw_, -.006, -hh_]), np.array([hw_, -.006, hh_]), np.array([-hw_, -.006, hh_])]
+    pv = [tuple(np.array([fx, WALL_Y - .018, fz]) + Rf @ c_) for c_ in corners]
+    pic = odd.mesh_obj(f'Lounge_Picture{k}', pv, [(0, 1, 2, 3)])
+    if np.mean(odd.nrm(pic)[:, 1]) > 0: odd.recalc(pic, inside=True)
+    uvp = pic.data.uv_layers.new(name='UVMap')
+    for li, uvv in zip(pic.data.polygons[0].loop_indices, [(0, 0), (1, 0), (1, 1), (0, 1)]): uvp.data[li].uv = uvv
+    pics.append(pic)
+picture_frames = odd.join(frames_, 'Lounge_PictureFrames')
+# ---------- 소파 오른쪽 팔걸이 · 등받이에 걸친 무늬 담요 (천 시뮬레이션) ----------
+BW, BD = .9, .62; nb_x, nb_y = 46, 32; bverts = []; bfaces = []
+for j in range(nb_y):
+    for i in range(nb_x):
+        u = i / (nb_x - 1) - .5; v = j / (nb_y - 1) - .5
+        a_ = .35; x_ = u * BW; y_ = v * BD
+        bverts.append((SX + HW - .2 + x_ * math.cos(a_) - y_ * math.sin(a_), SY + .02 + x_ * math.sin(a_) + y_ * math.cos(a_), .95 + .02 * math.sin(u * 6)))
+for j in range(nb_y - 1):
+    for i in range(nb_x - 1):
+        a0 = j * nb_x + i; bfaces.append((a0, a0 + 1, a0 + nb_x + 1, a0 + nb_x))
+throw = odd.mesh_obj('Lounge_Throw', bverts, bfaces)
+uvt = throw.data.uv_layers.new(name='UVMap')
+for poly in throw.data.polygons:
+    for li in poly.loop_indices:
+        vi = throw.data.loops[li].vertex_index; uvt.data[li].uv = ((vi % nb_x) / (nb_x - 1), (vi // nb_x) / (nb_y - 1))
+_fc = odd.mesh_obj('_floorcol2', [(-3, -3, 0), (3, -3, 0), (3, 3, 0), (-3, 3, 0)], [(0, 1, 2, 3)])
+odd.cloth_sim(throw, frames=45, colliders=[frame] + cushions + [_fc], quality=7, mass=.25, tension=18, bending=.6, collide_dist=.004, thickness_outer=.006)
+odd.delete(_fc)
+odd.solidify(throw, .004, offset=1); odd.subsurf(throw, 1)
 
 # =====================================================================================
 # 7. 러그: 두께 1.2 cm 슬래브 · 물결치는 가장자리 · 말린 모서리 + 양 끝 술
@@ -310,6 +355,14 @@ books.append(book('Lounge_Book5', (1.2, .52, .12), (.26, .18, .035), 1.5, -1.2))
 for k, (w, d, h, rz) in enumerate([(.19, .13, .028, .1), (.17, .12, .02, -.15)]):
     books.append(book(f'Lounge_TBook{k}', (TX + .07, TY - .06, .611 + h / 2 + k * .028), (w, d, h), rz))
 sleeves = []
+for k in range(11):                                                                                          # 바닥에 납작하게 쌓인 LP (가장자리가 고르지 않게)
+    phi = rng.uniform(-.25, .25); c = np.array([.40 + rng.uniform(-.015, .015), .06 + rng.uniform(-.015, .015), .0045 + k * .0042])
+    R = np.array([[math.cos(phi), -math.sin(phi), 0], [math.sin(phi), math.cos(phi), 0], [0, 0, 1]])
+    def sfn(p, c=c, R=R, k=k):
+        q = (p - c) @ R
+        return B_(q, (0, 0, 0), (.1575, .1575, .0018), None, .0012)
+    o = sdf_obj(f'_stack{k}', sfn, c - .2, c + .2, .0014, 260, subdiv=0)
+    o['c'] = c.tolist(); o['R'] = R.tolist(); sleeves.append(o)
 for k in range(9):                                                                                           # 소파 왼쪽 팔걸이에 기대어 선 LP
     ang = math.radians(70 + k * 1.6 + rng.uniform(-1.5, 1.5)); x = SX - HW - .05 - k * .007
     c = np.array([x - .16 * math.cos(ang), .25 + k * .004 + rng.uniform(-.008, .008), .158 * math.sin(ang)])
@@ -384,7 +437,7 @@ def scratches(p, count, area_c, area_r, seed, width=.0004, length=(.01, .06)):
     return out
 
 # ---------- 벨벳 (소파 · 쿠션 · 파이핑 · 단추) ----------
-def velvet(o, name, size, base=(.30, .03, .05), seed=0):
+def velvet(o, name, size, base=(.22, .02, .035), seed=0):
     S = S_of(o, size); p = S.p
     crush = tex.fbm(p * np.array([30, 30, 60]), 1.0, 4, seed=seed)                     # 눌린 결 (방향 따라 빛이 달라 보이는 얼룩)
     top = np.clip(S.n[:, 2], 0, 1)
@@ -397,14 +450,14 @@ def velvet(o, name, size, base=(.30, .03, .05), seed=0):
         edge_wear = np.clip((SY - .07 - .25 - p[:, 1]) / .06 + 1, 0, 1) * (p[:, 2] > .5)  # 앞 모서리
     worn = np.clip(edge_wear * (tex.fbm(p, 40, 3, seed=seed + 1) * .6 + .7), 0, 1)
     col = np.array(base)[None, :] * (1 + .22 * crush)[:, None]
-    col = col * (1 - worn[:, None] * .45) + np.array([.42, .16, .17])[None, :] * (worn[:, None] * .45)
+    col = col * (1 - worn[:, None] * .45) + np.array([.36, .12, .13])[None, :] * (worn[:, None] * .45)
     hh = crush * .5 + tex.vnoise(p, 900, seed=seed + 2) * .25
-    m = tex.material(name, TD, S.img(np.clip(col, 0, 1)), S.img(.62 + .15 * worn), tex.h2n(S.img(hh), .8), sheen=(.55, .45, (.75, .28, .32, 1)))
+    m = tex.material(name, TD, S.img(np.clip(col, 0, 1)), S.img(.62 + .15 * worn), tex.h2n(S.img(hh), .8), sheen=(.42, .45, (.58, .17, .2, 1)))
     o.data.materials.append(m); return m
 velvet(frame, 'Lounge_SofaVelvet', 2048)
 cm_ = velvet(cushions[0], 'Lounge_SofaCushion', 1024, seed=5)
 S_of(cushions[1], 64); cushions[1].data.materials.append(cm_)
-pv = odd.gltf_material('Lounge_Piping', base_value=(.22, .025, .04, 1), rough_value=.6, sheen=(.5, .4, (.7, .25, .3, 1)))
+pv = odd.gltf_material('Lounge_Piping', base_value=(.17, .018, .03, 1), rough_value=.6, sheen=(.4, .4, (.5, .16, .2, 1)))
 piping.data.materials.append(pv); sofa_buttons.data.materials.append(pv)
 S = S_of(sofa_legs, 512); col, rings, st = wood(S.p, (0, 0, 1), .004, 3)
 sofa_legs.data.materials.append(tex.material('Lounge_SofaLegs', TD, S.img(col * .8), S.img(.32 + .2 * st), tex.h2n(S.img(rings * .3), .6), coat=(.6, .2)))
@@ -432,14 +485,14 @@ S = S_of(lamp_base, 1024); p = S.p
 f1, f2 = None, None
 crack = np.abs(tex.vnoise(p, 260, seed=2)) < .04
 drip = np.clip(tex.fbm(p * np.array([60, 60, 8]), 1.0, 3, seed=3), 0, 1)
-col = np.array([.12, .3, .29])[None, :] * (1 + .35 * drip[:, None]) * np.where(crack[:, None], .7, 1.0)
+col = np.array([.52, .27, .10])[None, :] * (1 + .35 * drip[:, None]) * np.where(crack[:, None], .7, 1.0)   # 호박 · 황토 유약 (콘셉트)
 lamp_base.data.materials.append(tex.material('Lounge_Ceramic', TD, S.img(col), S.img(.12 + .1 * crack), tex.h2n(S.img(crack.astype(float) * .4 + drip * .2), 1.0), coat=(1, .05)))
 bulb.data.materials.append(odd.gltf_material('Lounge_Bulb', base_value=(1, .9, .7, 1), rough_value=.2, emission=((1, .72, .38, 1), 6.0)))
 S = S_of(shade, 1024); p = S.p
 inner = (S.n[:, 0] * (p[:, 0] - LX) + S.n[:, 1] * (p[:, 1] - LY)) < 0
 weave = (np.sin(np.arctan2(p[:, 1] - LY, p[:, 0] - LX) * 900) * .5 + np.sin(p[:, 2] * 3000) * .5) * .3
-col = np.where(inner[:, None], np.array([.95, .82, .62]), np.array([.83, .76, .62]) * (1 - .1 * np.clip(tex.fbm(p, 30, 3, seed=6), 0, 1))[:, None])
-emit = np.where(inner[:, None], np.array([1, .76, .45]), np.array([.55, .38, .2]) * .35)
+col = np.where(inner[:, None], np.array([.98, .74, .42]), np.array([.80, .50, .22]) * (1 - .1 * np.clip(tex.fbm(p, 30, 3, seed=6), 0, 1))[:, None])
+emit = np.where(inner[:, None], np.array([1, .66, .32]), np.array([.9, .52, .2]) * .55)                  # 불 켜진 호박색 천 갓 (빛이 천을 통과한다)
 shade_m = tex.material('Lounge_Shade', TD, S.img(col), S.img(np.full(len(p), .9)), tex.h2n(S.img(weave), .8), emission=((1, 1, 1, 1), 0.0))
 nt = shade_m.node_tree; em = nt.nodes.new('ShaderNodeTexImage'); em.image = tex.load(tex.save(S.img(emit), os.path.join(TD, 'Lounge_Shade_e.jpg')))
 nt.links.new(em.outputs['Color'], nt.nodes['Principled BSDF'].inputs['Emission Color']); nt.nodes['Principled BSDF'].inputs['Emission Strength'].default_value = 1.6
@@ -447,9 +500,10 @@ shade.data.materials.append(shade_m)
 
 # ---------- 전선 · 플러그 · 콘센트 ----------
 S = S_of(cable, 512); braid = np.sin((S.p[:, 0] + S.p[:, 1] + S.p[:, 2]) * 3500) * .5
-cord_m = tex.material('Lounge_Cord', TD, S.img(np.tile([.09, .06, .045], (len(S.p), 1)) * (1 + .3 * braid[:, None])), S.img(np.full(len(S.p), .8)), tex.h2n(S.img(braid), 1.0))
+rub = tex.fbm(S.p, 300, 3, seed=8)
+cord_m = tex.material('Lounge_Cord', TD, S.img(np.tile([.03, .03, .033], (len(S.p), 1)) * (1 + .4 * np.clip(rub, 0, 1)[:, None])), S.img(.5 + .15 * rub), tex.h2n(S.img(rub * .2), .6))   # 검은 고무 (콘셉트)
 cable.data.materials.append(cord_m); S_of(cable_loop, 64); cable_loop.data.materials.append(cord_m)
-plug.data.materials.append(odd.gltf_material('Lounge_Bakelite', base_value=(.12, .07, .05, 1), rough_value=.3))
+plug.data.materials.append(odd.gltf_material('Lounge_Bakelite', base_value=(.03, .03, .03, 1), rough_value=.35))
 outlet.data.materials.append(oldbrass)
 
 # ---------- 벽: 다마스크 벽지(누렇게 바램 · 얼룩 · 위쪽 그을음) · 웨인스코팅 · 몰딩 ----------
@@ -517,10 +571,10 @@ DT = damask_tile(); DTH, DTW = DT.shape
 dam = DT[np.clip(((.5 - y_) * DTH).astype(int), 0, DTH - 1), np.clip(((x_ + .5) * DTW).astype(int), 0, DTW - 1)]
 age = np.clip(tex.fbm(p, 2.0, 4, seed=11) * .7 + .3, 0, 1); stain = np.clip(tex.fbm(p, .8, 3, seed=12) * 1.6 - .5, 0, 1)
 soot = np.clip((p[:, 2] - 1.7) / .6, 0, 1)
-col = np.array([.15, .17, .11])[None, :] * (1 - dam[:, None]) + np.array([.30, .33, .21])[None, :] * dam[:, None]
+col = np.array([.085, .07, .052])[None, :] * (1 - dam[:, None]) + np.array([.17, .14, .095])[None, :] * dam[:, None]
 col = col * (1 - .25 * age[:, None]) * (1 - .3 * soot[:, None]) + np.array([.25, .19, .08])[None, :] * (stain * .35)[:, None]
 lower = p[:, 2] < .9
-wcol = wood(p, (0, 0, 1), .007, 13)[0] * .85
+wcol = wood(p, (0, 0, 1), .007, 13)[0] * .7
 col = np.where(lower[:, None], wcol, col)
 wall.data.materials.append(tex.material('Lounge_Wallpaper', TD, S.img(np.clip(col, 0, 1)), S.img(np.where(lower, .35, .8 - .25 * dam)), tex.h2n(S.img(dam * .3), .8)))
 for o, axis, sd in ((wainscot, (0, 0, 1), 14), (base_m, (1, 0, 0), 15), (rail_m, (1, 0, 0), 16)):
@@ -536,38 +590,83 @@ col = col * (1 - chip[:, None]) + wood(p, (1, 0, 0), .006, 23)[0] * chip[:, None
 window.data.materials.append(tex.material('Lounge_WindowPaint', TD, S.img(col), S.img(.55 + .2 * chip), tex.h2n(S.img(chip * .5), 1.0)))
 glass.data.materials.append(odd.gltf_material('Lounge_Glass', base_value=(.02, .035, .07, 1), rough_value=.05, spec=1.0))
 
-# ---------- 커튼: 짙은 청록 벨벳 · 밑단 먼지 ----------
+# ---------- 커튼: 짙은 붉은 벨벳(무겁게) · 밑단 먼지 + 창 안쪽 레이스 (콘셉트) ----------
 for o, nm in ((cur_l, 'Lounge_CurtainL'), (cur_r, 'Lounge_CurtainR')):
     S = S_of(o, 1024); p = S.p
     dust = np.clip((.25 - p[:, 2]) / .25, 0, 1)
-    col = np.array([.05, .16, .16])[None, :] * (1 + .25 * tex.fbm(p * np.array([20, 20, 4]), 1.0, 3, seed=31))[:, None] * (1 + .6 * dust[:, None])
-    o.data.materials.append(tex.material(nm, TD, S.img(col), S.img(.7 + .1 * dust), tex.h2n(S.img(tex.vnoise(p, 700, seed=32) * .3), .6), sheen=(1, .45, (.6, 1, .95, 1))))
+    col = np.array([.26, .03, .045])[None, :] * (1 + .25 * tex.fbm(p * np.array([20, 20, 4]), 1.0, 3, seed=31))[:, None] * (1 + .6 * dust[:, None])
+    o.data.materials.append(tex.material(nm, TD, S.img(col), S.img(.7 + .1 * dust), tex.h2n(S.img(tex.vnoise(p, 700, seed=32) * .3), .6), sheen=(.7, .45, (.75, .25, .28, 1))))
+L2 = 1024; lv, lu = (np.mgrid[0:L2, 0:L2] + .5) / L2
+lace = ((np.sin(lu * TAU * 30) * np.sin(lv * TAU * 40) > .55) | (np.abs(np.hypot((lu * 10) % 1 - .5, (lv * 12) % 1 - .5) - .3) < .04)).astype(float)
+la = np.clip(.38 + .45 * lace, 0, 1)
+lc = np.dstack([np.full((L2, L2), .86), np.full((L2, L2), .84), np.full((L2, L2), .78), la])
+lp_ = tex.save(lc, os.path.join(TD, 'Lounge_Sheer_c.png'))
+sheer_m = odd.gltf_material('Lounge_Sheer', base=tex.load(lp_), rough_value=.8, alpha_tex='base', alpha_mode='BLEND', double=True)
+sheer.data.materials.append(sheer_m)
 
 # ---------- 러그: 페르시아 무늬(메달리온 · 테두리 띠 · 잔무늬) · 바랜 색 · 닳은 길(씨실이 보인다) ----------
 R_ = 1024; vv, uu = (np.mgrid[0:R_, 0:R_] + .5) / R_
 xx_ = (uu - .5) * 2; yy_ = (vv - .5) * 2
 ax_ = np.abs(xx_); ay_ = np.abs(yy_)
-border = (np.maximum(ax_ * 1.0, ay_ * 1.0) > .84)
-band2 = (np.maximum(ax_, ay_) > .78) & ~border
-med = np.hypot(xx_ * 1.0, yy_ * 1.45)
-medal = (med < .32) | ((np.abs(med - .4) < .03))
-star = (np.cos(np.arctan2(yy_, xx_) * 8) * .5 + .5) * np.exp(-med * 3) > .35
-field_m = (np.cos(xx_ * 26) * np.cos(yy_ * 26 * 1.45) > .6)
-RED = np.array([.42, .07, .07]); NAVY = np.array([.07, .1, .22]); IVORY = np.array([.78, .7, .55]); GOLD = np.array([.62, .45, .18])
-img = np.tile(RED, (R_, R_, 1))
-img = np.where(field_m[..., None], NAVY, img); img = np.where(band2[..., None], IVORY, img); img = np.where(border[..., None], NAVY, img)
-img = np.where((border & (np.cos((xx_ + yy_) * 40) > .4))[..., None], GOLD, img)
-img = np.where(medal[..., None], IVORY, img); img = np.where(star[..., None], GOLD, img)
-img = np.where(((med < .16))[..., None], NAVY, img)
+RED = np.array([.30, .04, .05]); RED2 = np.array([.24, .03, .04]); NAVY = np.array([.05, .07, .16]); IVORY = np.array([.64, .55, .42]); GOLD = np.array([.55, .38, .14]); TEAL = np.array([.08, .2, .2])
+def put_(img, m, col):
+    return img * (1 - m[..., None]) + np.asarray(col)[None, None, :] * m[..., None]
+def soft(m, w=.004):
+    return np.clip(.5 - m / w, 0, 1)                                                              # 거리 → 부드러운 마스크
+bmax = np.maximum(ax_, ay_ * 1.0)
+# 바탕: 붉은 들판 + 씨실 방향 색 띠(아브라시)
+abrash = (np.sin(yy_ * 7 + tex.fbm(np.stack([uu.ravel(), vv.ravel(), np.zeros(R_ * R_)], 1), 2.0, 2, seed=44).reshape(R_, R_) * 2) * .5 + .5)
+img = RED[None, None, :] * (1 - .25 * abrash[..., None]) + RED2[None, None, :] * (.25 * abrash[..., None])
+# 들판: 헤라티 격자 (마름모 줄기 + 마디 꽃 + 잎)
+gu, gv = xx_ * 9, yy_ * 6
+lat = np.minimum(np.abs(((gu + gv) % 2) - 1), np.abs(((gu - gv) % 2) - 1))
+img = put_(img, soft(lat - .06, .05) * .9, NAVY)
+nodes = np.hypot(((gu + 1) % 2) - 1, ((gv + 1) % 2) - 1)
+petal = np.cos(np.arctan2(((gv + 1) % 2) - 1, ((gu + 1) % 2) - 1) * 4) * .08 + .22
+img = put_(img, soft(nodes - petal, .04), IVORY); img = put_(img, soft(nodes - .08, .03), GOLD)
+leaf = np.hypot((gu % 2) - 1, ((gv % 2) - 1) * 1.8)
+img = put_(img, soft(leaf - .18, .04) * .8, TEAL)
+# 모서리 반 메달리온 (스팬드럴)
+for sx in (-1, 1):
+    for sy in (-1, 1):
+        cd = np.hypot((xx_ - sx * .78) * 1.0, (yy_ - sy * .78) * 1.45)
+        img = put_(img, soft(cd - .34, .01), NAVY); img = put_(img, soft(np.abs(cd - .34) - .012, .006), IVORY)
+        img = put_(img, soft(np.abs(cd - .24) - .01, .006) * .8, GOLD)
+# 가운데 메달리온: 꽃잎 테(12갈래) · 남색 · 상아 테 · 붉은 별 · 금색 · 위아래 펜던트
+th = np.arctan2(yy_ * 1.45, xx_); md = np.hypot(xx_, yy_ * 1.45)
+lob = .36 + .035 * np.cos(th * 12)
+img = put_(img, soft(md - lob, .008), NAVY); img = put_(img, soft(np.abs(md - lob) - .012, .006), IVORY)
+star = .2 + .06 * np.cos(th * 8)
+img = put_(img, soft(md - star, .006), RED); img = put_(img, soft(np.abs(md - star) - .008, .005), GOLD)
+img = put_(img, soft(md - .07, .006), IVORY); img = put_(img, soft(md - .035, .005), NAVY)
+for sy in (-1, 1):
+    pd = np.hypot(xx_ * 2.2, (yy_ - sy * .47) * 2.6)
+    img = put_(img, soft(pd - .1, .01), NAVY); img = put_(img, soft(np.abs(pd - .1) - .01, .006), IVORY)
+img = put_(img, soft(np.abs(xx_) - .006, .004) * (ay_ < .62) * (ay_ > .38), IVORY)
+# 테두리: 바깥 가드 줄 · 남색 큰 띠(로제트 + 금색 덩굴) · 안쪽 가드 줄
+img = put_(img, ((bmax > .78) & (bmax < .955)).astype(float), NAVY)
+for g0 in (.955, .965, .975, .76, .77):
+    img = put_(img, soft(np.abs(bmax - g0) - .003, .002), IVORY if g0 in (.965, .77) else RED)
+img = put_(img, (bmax > .98).astype(float), RED2)
+bt = np.where(ax_ > ay_, yy_, xx_) * (np.where(ax_ > ay_, 1.0, 1.45))                              # 띠를 따라가는 좌표
+bw_ = (bmax - .7775) / (.955 - .7775)                                                             # 띠 안의 깊이 0..1
+inband = (bw_ > 0) & (bw_ < 1)
+vine = soft(np.abs(bw_ - .5 - .22 * np.sin(bt * 22)) - .03, .02) * inband
+img = put_(img, vine, GOLD)
+ros = np.hypot(((bt * 11) % 1 - .5) * 1.0, (bw_ - .5) * 1.6) * inband
+rth = np.arctan2(bw_ - .5, (bt * 11) % 1 - .5)
+img = put_(img, soft(ros - (.26 + .07 * np.cos(rth * 8)), .03) * inband, RED)
+img = put_(img, soft(ros - .1, .02) * inband, IVORY)
+# 바램 · 닳은 길(씨실이 보인다) · 먼지
 P2 = np.stack([uu.ravel() * 3, vv.ravel() * 2, np.zeros(R_ * R_)], 1)
 fade = (tex.fbm(P2, 2.0, 4, seed=41).reshape(R_, R_) * .5 + .5)
 path = np.exp(-((xx_ - .1) / .5) ** 2) * np.clip(1 - (yy_ + .2) / 1.4, 0, 1)
-worn = np.clip(path * (fade * 1.1) - .45, 0, 1) * .8
+worn = np.clip(path * (fade * 1.1) - .5, 0, 1) * .7
 warp_lines = (np.sin(uu * 900) > .3)
-img = img * (1 - .15 * fade[..., None]) + np.array([.5, .4, .32]) * (.15 * fade[..., None])
-img = img * (1 - worn[..., None] * .6) + np.where(warp_lines[..., None], np.array([.82, .78, .7]), np.array([.55, .5, .42])) * (worn[..., None] * .6)
+img = img * (1 - .12 * fade[..., None]) + np.array([.42, .34, .28]) * (.12 * fade[..., None])
+img = img * (1 - worn[..., None] * .35) + np.where(warp_lines[..., None], np.array([.7, .64, .56]), np.array([.45, .4, .34])) * (worn[..., None] * .35)
 pile = (tex.vnoise(np.stack([uu.ravel() * 500, vv.ravel() * 500, np.zeros(R_ * R_)], 1), 1.0, seed=3).reshape(R_, R_)) * (1 - worn)
-rug.data.materials.append(tex.material('Lounge_Rug', TD, img, .85 + .1 * worn, tex.h2n(pile * .8, 1.2), sheen=(.3, .6, (.8, .6, .55, 1))))
+rug.data.materials.append(tex.material('Lounge_Rug', TD, np.clip(img, 0, 1), .88 + .08 * worn, tex.h2n(pile * .8, 1.2)))     # 결 반사(sheen) 없음 — 바닥에서 비스듬히 보면 분홍빛으로 번진다
 S_of(fringe, 64); fringe.data.materials.append(odd.gltf_material('Lounge_Fringe', base_value=(.78, .72, .6, 1), rough_value=.9))
 
 # ---------- 책: 천 표지(색 제각각) · 책등 금박 띠 · 종이(크림 · 결) · 윗면 먼지 ----------
@@ -612,13 +711,79 @@ sleeve_all = odd.join(sleeves, 'Lounge_LPSleeves')
 # ---------- 마루: 널마다 다른 월넛 · 긁힘 · 벽 쪽 먼지 · 소파 앞 닳은 길 ----------
 S = S_of(floor, 2048, angle=30, margin=.002); p = S.p
 plank = np.floor((p[:, 1] + .85) / .0895)
-col, rings, st = wood(p + np.stack([np.zeros(len(p)), np.zeros(len(p)), plank * .37], 1), (1, 0, 0), .005, 41)
+col, rings, st = wood(p + np.stack([np.zeros(len(p)), np.zeros(len(p)), plank * .37], 1), (1, 0, 0), .005, 41, dark=(.09, .048, .026), light=(.22, .12, .06))   # 짙은 월넛 (콘셉트)
 col = col * (.8 + .4 * ((plank * 7919) % 13 / 13.))[:, None]
 scr = scratches(p, 160, (0, .05, 0), (1.3, .9, .0), 43, .0005, (.02, .12))
 dust = np.clip((p[:, 1] - (WALL_Y - .12)) / .1, 0, 1) * .5
 pathw = np.exp(-((p[:, 1] + .45) / .2) ** 2) * .5
 col = col * (1 + .4 * scr[:, None] + .25 * pathw[:, None]) * (1 - .1 * dust[:, None]) + np.array([.35, .32, .28])[None, :] * dust[:, None] * .4
-floor.data.materials.append(tex.material('Lounge_Floor', TD, S.img(np.clip(col, 0, 1)), S.img(np.clip(.3 + .25 * scr + .2 * pathw + .3 * dust + .1 * st, 0, 1)), tex.h2n(S.img(rings * .3 - scr), .9), coat=(.35, .2)))
+floor.data.materials.append(tex.material('Lounge_Floor', TD, S.img(np.clip(col, 0, 1)), S.img(np.clip(.24 + .25 * scr + .2 * pathw + .3 * dust + .1 * st, 0, 1)), tex.h2n(S.img(rings * .3 - scr), .9), coat=(.6, .12)))
+
+# ---------- 액자: 낡은 금박(오목한 곳은 어둡게) · 그림 2점(초상 · 달밤 풍경, 바랜 유화) ----------
+S = S_of(picture_frames, 1024); p = S.p
+gild_w = np.clip(tex.fbm(p, 60, 3, seed=51) * 1.4 + .2, 0, 1)
+fcol = np.array([.46, .33, .14])[None, :] * (.7 + .4 * gild_w)[:, None] * np.where((S.n[:, 1] < -.6)[:, None], 1.0, .55)
+picture_frames.data.materials.append(tex.material('Lounge_FrameGilt', TD, S.img(np.clip(fcol, 0, 1)), S.img(.42 + .2 * (1 - gild_w)), tex.h2n(S.img(gild_w * .3), .8), metal_value=.7))
+def painting(kind, W, H):
+    """바랜 유화 한 점: 겹친 붓 모양을 흐리게 섞고, 붓결 노이즈 · 비네트 · 누런 니스 · 빙열."""
+    from PIL import ImageFilter
+    def layer(draw_fn, blur):
+        im = Image.new('L', (W, H), 0); draw_fn(ImageDraw.Draw(im)); return np.asarray(im.filter(ImageFilter.GaussianBlur(blur))).astype(float) / 255
+    gy, gx = np.mgrid[0:H, 0:W]; yy, xx = gy / H, gx / W
+    def over(base, m, col):
+        return base * (1 - m[..., None]) + np.array(col)[None, None, :] * m[..., None]
+    if kind == 0:                                                                                     # 초상: 어두운 배경 · 빛 받은 얼굴 · 검은 옷 · 흰 깃
+        a = np.dstack([.16 + .1 * (1 - yy), .12 + .07 * (1 - yy), .08 + .03 * (1 - yy)])
+        glow = np.exp(-(((xx - .45) / .45) ** 2 + ((yy - .35) / .4) ** 2)); a = a + glow[..., None] * np.array([.12, .08, .04])
+        body = layer(lambda d: d.polygon([(W * .08, H), (W * .26, H * .62), (W * .5, H * .58), (W * .74, H * .62), (W * .92, H)], fill=255), 6)
+        a = over(a, body, (.07, .065, .07))
+        collar = layer(lambda d: d.polygon([(W * .38, H * .6), (W * .5, H * .72), (W * .62, H * .6), (W * .56, H * .58), (W * .5, H * .64), (W * .44, H * .58)], fill=255), 3)
+        a = over(a, collar * .9, (.78, .74, .64))
+        neck = layer(lambda d: d.rectangle([W * .43, H * .45, W * .57, H * .6], fill=255), 4); a = over(a, neck, (.5, .36, .26))
+        face = layer(lambda d: d.ellipse([W * .34, H * .2, W * .66, H * .54], fill=255), 5)
+        shade = np.clip((xx - .42) / .25, 0, 1)                                                        # 오른쪽은 그늘
+        fcol = np.dstack([.78 - .3 * shade, .58 - .24 * shade, .44 - .2 * shade])
+        a = a * (1 - face[..., None]) + fcol * face[..., None]
+        def hair_(d):
+            d.ellipse([W * .3, H * .13, W * .7, H * .36], fill=255); d.rectangle([W * .3, H * .24, W * .37, H * .42], fill=255); d.rectangle([W * .63, H * .24, W * .7, H * .42], fill=255)
+        a = over(a, layer(hair_, 5), (.13, .09, .06))
+        for ex in (.44, .56):
+            a = over(a, layer(lambda d, ex=ex: d.ellipse([W * (ex - .025), H * .34, W * (ex + .025), H * .365], fill=255), 1.5), (.18, .12, .1))
+    else:                                                                                             # 달밤 풍경: 하늘 · 달빛 번짐 · 언덕 · 나무 · 호수
+        a = np.dstack([.10 + .14 * yy, .12 + .12 * yy, .18 + .04 * yy])
+        moon = layer(lambda d: d.ellipse([W * .66, H * .14, W * .82, H * .28], fill=255), 2)
+        halo = layer(lambda d: d.ellipse([W * .56, H * .04, W * .92, H * .38], fill=255), 22)
+        a = a + halo[..., None] * np.array([.18, .17, .12]); a = over(a, moon, (.86, .82, .62))
+        hill = layer(lambda d: d.polygon([(0, H * .72), (W * .3, H * .6), (W * .6, H * .7), (W, H * .58), (W, H), (0, H)], fill=255), 4)
+        a = over(a, hill, (.08, .1, .07))
+        def trees_(d):
+            for tx in (.16, .27, .5): d.polygon([(W * tx, H * .28), (W * (tx - .08), H * .72), (W * (tx + .08), H * .72)], fill=255)
+        a = over(a, layer(trees_, 3), (.05, .07, .05))
+        lake = layer(lambda d: d.ellipse([W * .55, H * .78, W * .95, H * .9], fill=255), 5); a = over(a, lake * .6, (.3, .32, .3))
+    P3 = np.column_stack([xx.ravel() * 3, yy.ravel() * 3, np.zeros(W * H)])
+    brush = tex.fbm(P3 * np.array([60, 14, 1]), 1.0, 3, seed=54 + kind).reshape(H, W)
+    a = a * (1 + .1 * brush[..., None])
+    vig = np.clip(1 - (((xx - .5) / .6) ** 2 + ((yy - .5) / .65) ** 2), 0, 1) ** .5
+    a = a * (.55 + .45 * vig[..., None]) * np.array([1.0, .92, .74])                                   # 비네트 · 누런 니스
+    crq = (np.abs(tex.vnoise(P3 * 20, 1.0, seed=52 + kind)).reshape(H, W) < .03)
+    a = a * (1 - .2 * crq[..., None])
+    return np.clip(a, 0, 1)[::-1], crq[::-1]
+for k, o in enumerate(pics):
+    W, H = (360, 460) if k == 0 else (300, 360)
+    a, crq = painting(k, W, H)
+    o.data.materials.append(tex.material(f'Lounge_Painting{k}', TD, a, .55 + .3 * crq, tex.h2n(crq.astype(float) * .5, 1.0), coat=(.4, .25)))
+# ---------- 담요: 짙은 남색 · 녹 · 크림 줄 무늬 직물 + 양 끝 술 (알파) ----------
+T2 = 1024; tv, tu = (np.mgrid[0:T2, 0:T2] + .5) / T2
+bandk = np.floor(tu * 14) % 5
+tcol = np.select([(bandk == 0)[..., None], (bandk == 1)[..., None], (bandk == 2)[..., None], (bandk == 3)[..., None]], [np.array([.08, .1, .2]), np.array([.55, .25, .1]), np.array([.78, .7, .55]), np.array([.08, .1, .2])], np.array([.36, .08, .07]))
+zig = (np.abs(((tv * 20) % 1) - .5) * 2 > np.abs(((tu * 70) % 1) - .5) * 2) & (bandk == 2)
+tcol = np.where(zig[..., None], np.array([.36, .08, .07]), tcol)
+weave_t = (np.sin(tu * 1400) * np.sin(tv * 1400)) * .5
+fringe_m = (tu < .05) | (tu > .95)
+alpha_t = np.where(fringe_m, (np.sin(tv * 380) > .1).astype(float), 1.0)
+tcol = np.where(fringe_m[..., None], np.array([.76, .68, .54]), tcol) * (1 + .1 * weave_t[..., None])
+tp_ = tex.save(np.dstack([np.clip(tcol, 0, 1), alpha_t]), os.path.join(TD, 'Lounge_Throw_c.png'))
+throw.data.materials.append(odd.gltf_material('Lounge_Throw', base=tex.load(tp_), rough_value=.9, alpha_tex='base', alpha_mode='MASK', double=True, sheen=(.4, .5, (.7, .6, .5, 1))))
 
 # =====================================================================================
 # 11. 내보내기 (리뷰 후보)

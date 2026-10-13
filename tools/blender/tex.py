@@ -63,7 +63,11 @@ def _bake_vec(o, size, what):
     """위치(pos) 또는 월드 법선(nrm)을 32비트 이미지로 굽는다 (방출 셰이더)."""
     saved = [s.material for s in o.material_slots]
     M = odd.Mat('_bk_' + what); g = M.node('ShaderNodeNewGeometry'); em = M.node('ShaderNodeEmission')
-    M.link(g.outputs['Position' if what == 'pos' else 'Normal'], em.inputs['Color'])
+    # 구운 텍셀만 골라내려고 값을 옮겨 굽는다 (위치 +100 m, 법선 +2): 굽기 전 지우기는 알파까지 1로 채워서 알파로는 구분이 안 된다
+    OFF = 100.0 if what == 'pos' else 2.0
+    add = M.node('ShaderNodeVectorMath'); add.operation = 'ADD'; add.inputs[1].default_value = (OFF, OFF, OFF)
+    M.link(g.outputs['Position' if what == 'pos' else 'Normal'], add.inputs[0])
+    M.link(add.outputs['Vector'], em.inputs['Color'])
     M.link(em.outputs['Emission'], M.out.inputs['Surface'])
     if not o.material_slots:
         o.data.materials.append(M.m)
@@ -84,7 +88,9 @@ def _bake_vec(o, size, what):
     if not saved:
         o.data.materials.clear()
     bpy.data.images.remove(im); bpy.data.materials.remove(M.m)
-    return a[:, :, :3].astype(np.float64), a[:, :, 3] > .5
+    rgb = a[:, :, :3].astype(np.float64)
+    mask = rgb.min(axis=2) > OFF * .5                                                         # 구운 텍셀 = 옮긴 값 (지운 텍셀은 0)
+    return np.where(mask[..., None], rgb - OFF, 0.0), mask
 
 
 def dilate(img, mask):
@@ -111,7 +117,7 @@ def save(arr, path, srgb=True, quality=90):
         a = np.stack([a] * 3, -1)
     a = (a[::-1] * 255 + .5).astype(np.uint8)
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    im = Image.fromarray(a[:, :, :3] if a.shape[2] >= 3 else a)
+    im = Image.fromarray(a if (a.shape[2] == 4 and not path.endswith('.jpg')) else a[:, :, :3])   # PNG는 알파(4채널)를 지킨다
     if path.endswith('.jpg'):
         im.save(path, quality=quality)
     else:

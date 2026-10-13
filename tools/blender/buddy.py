@@ -34,6 +34,8 @@ def to_game_cm(p):
 # 1. 몸 SDF (게임 좌표 cm로 설계)
 # =====================================================================================
 J = {k: np.array(RIG[k]['p']) * 100 for k in RIG}          # 관절 (cm)
+TAIL_PTS = [tuple(J['tail0']), tuple(J['tail1']), tuple(J['tail2']), tuple(J['tail3']),
+            (-3.3, 30.4, -28.9), (-2.9, 33.6, -27.0), (-2.1, 35.2, -23.9)]   # 리그 끝 뒤로 이어지는 말린 끝 (겉모습만)
 EYE_R = 2.6
 def body_sdf(q):
     S, E, C = odd.sd_round_cone, odd.sd_ellipsoid, odd.sd_chain
@@ -58,7 +60,7 @@ def body_sdf(q):
         hl = C(q, [(sx * 6.2, 15.0, -9.0), (sx * 6.4, 7.0, -12.8), (sx * 6.4, 3.4, -10.6)], [6.0, 3.6, 3.1], 1.6)
         hpaw = E(q, (sx * 6.4, 1.8, -7.9), (3.2, 2.0, 3.7))
         d = sm(d, sm(hl, hpaw, 1.4), 3.0)
-    tail = C(q, [tuple(J['tail0']), tuple(J['tail1']), tuple(J['tail2']), tuple(J['tail3'])], [2.8, 2.6, 2.3, 1.9], 1.0)
+    tail = C(q, TAIL_PTS, [2.8, 2.9, 3.1, 3.3, 3.3, 3.0, 2.2], 1.2)        # 콘셉트: 위로 솟아 등 쪽으로 말린 깃털 꼬리
     d = sm(d, tail, 2.0)
     # 눈구멍 (눈알이 들어갈 자리)
     for k in ('eye0', 'eye1'):
@@ -109,6 +111,8 @@ def fur_amp(g):
     beard = np.exp(-(((y - 35.5) / 3.2) ** 2 + (x / 6.5) ** 2 + ((z - 15.5) / 4.5) ** 2))
     a += 1.3 * beard                                                                   # 턱수염 · 주둥이 털
     a *= 1 - .6 * np.clip((3.0 - y) / 2.5, 0, 1)                                      # 발바닥
+    a += 1.1 * np.clip(-(z + 18) / 3, 0, 1) * np.clip((y - 17) / 3, 0, 1)            # 깃털 꼬리 (부풀게)
+    a += .35 * np.clip((y - 47) / 4, 0, 1)                                            # 정수리 (부스스하게 솟는 털)
     return a
 
 def flow_field(g, n_g):
@@ -121,7 +125,7 @@ def flow_field(g, n_g):
     face = g - np.array([0, 41, 22]); face /= np.maximum(np.linalg.norm(face, axis=1, keepdims=True), 1e-6)
     f = f * (1 - head) + head * (face * 1.0 + np.array([0, -.9, -.2]))
     tl = np.clip(-(z + 17) / 3, 0, 1)[:, None] * np.clip((y - 15) / 3, 0, 1)[:, None]
-    tdir = g - np.array([0, 18, -19]); tdir /= np.maximum(np.linalg.norm(tdir, axis=1, keepdims=True), 1e-6)
+    tdir = g - np.array([0, 22, -22]); tdir /= np.maximum(np.linalg.norm(tdir, axis=1, keepdims=True), 1e-6)
     f = f * (1 - tl) + tl * tdir
     f -= n_g * np.sum(f * n_g, 1, keepdims=True)
     return f / np.maximum(np.linalg.norm(f, axis=1, keepdims=True), 1e-6)
@@ -148,9 +152,32 @@ def shag(o, seed=0, k_amp=1.0):
     side = np.clip(1 - np.abs(up_), 0, 1); belly = np.clip(-up_, 0, 1)
     droop = amp * saw ** 2 * prof_c * (.6 * side + .7 * belly)      # 처진 다발 끝
     disp = n * (h * .01)[:, None] + down * (droop * .01)[:, None]
-    odd.set_co(o, a + disp)
+    odd.set_co(o, a + unfold(o, a, disp))
     return f
 
+def unfold(o, a0, disp, iters=24):
+    """접힌 면(부풀리기 전 면과 반대쪽을 보는 면)이 생긴 곳만 변위를 이웃 평균으로 푼다 — 처진 다발 끝이 다음 다발 위로 접히면
+    뒤집힌 면이 되어 웹 뷰어에서 검은 줄(호랑이 무늬)로 보인다."""
+    from scipy.sparse import coo_matrix
+    me = o.data; me.calc_loop_triangles()
+    tri = np.array([t.vertices[:] for t in me.loop_triangles]); ed = np.array([e.vertices[:] for e in me.edges])
+    A = coo_matrix((np.ones(2 * len(ed)), (np.r_[ed[:, 0], ed[:, 1]], np.r_[ed[:, 1], ed[:, 0]])), shape=(len(a0), len(a0))).tocsr()
+    deg = np.maximum(np.asarray(A.sum(1)).ravel(), 1)
+    def fn(c):
+        n_ = np.cross(c[tri[:, 1]] - c[tri[:, 0]], c[tri[:, 2]] - c[tri[:, 0]]); return n_ / np.maximum(np.linalg.norm(n_, axis=1, keepdims=True), 1e-12)
+    n0 = fn(a0); disp = disp.copy(); nb0 = None
+    for it in range(iters):
+        bad = (fn(a0 + disp) * n0).sum(1) < .3
+        nb0 = bad.sum() if nb0 is None else nb0
+        if not bad.any(): break
+        vb = np.zeros(len(a0)); vb[tri[bad].ravel()] = 1
+        vb = (vb + A @ vb) > 0                                                                       # 접힌 면 + 한 고리 이웃
+        disp[vb] = .4 * disp[vb] + .6 * ((A @ disp) / deg[:, None])[vb]
+    print('unfold', o.name, 'folded faces', nb0, '->', int(((fn(a0 + disp) * n0).sum(1) < .3).sum()), 'iters', it + 1)
+    return disp
+
+odd.uv_smart(body, 66, .004)                                                                    # UV는 털을 부풀리기 전 매끈한 몸에서 편다 (부풀린 뒤에 펴면 조각이 수천 개 → 조각 경계에서 노멀맵이 틀어져 검은 줄)
+N0_BODY = odd.nrm(body)                                                                         # 부풀리기 전 몸의 법선 (털 셰이딩용)
 FLOW = shag(body, 1)
 odd.smooth(body, 1, .2)
 
@@ -244,22 +271,31 @@ _de = RP('ear1') - Vector((-RP('ear0').x, RP('ear0').y, RP('ear0').z)); odd.set_
 # =====================================================================================
 # 5. 털 색 (부위 · 다발 · 결) — 몸 텍스처와 털 카드 색이 같은 함수를 쓴다
 # =====================================================================================
-CREAM = np.array([.84, .76, .62]); TAUPE = np.array([.46, .40, .35]); BROWN = np.array([.36, .25, .17]); BLAZE = np.array([.92, .88, .8])
+TAN = np.array([.50, .34, .20]); CREAM = np.array([.74, .60, .42]); GRAYB = np.array([.42, .35, .29])
+BROWN = np.array([.19, .12, .08]); TAUPE = np.array([.36, .27, .20]); BLAZE = np.array([.70, .56, .40])
 def fur_color(g, n_g=None):
+    """콘셉트 시트 색: 캐러멜 · 황갈 바탕 / 등 · 엉덩이는 회갈색 / 정수리 · 뒤통수 · 눈가는 진한 갈색 / 주둥이 · 턱수염 · 가슴 · 발은 크림 / 꼬리는 황갈 + 크림 끝."""
     x, y, z = g[:, 0], g[:, 1], g[:, 2]
-    top = np.clip((y - 15) / 6, 0, 1) * np.clip(1 - np.abs(x) / 12, 0, 1) * np.clip((-z + 12) / 6, 0, 1)   # 등 · 엉덩이 · 옆구리 위
-    col = CREAM[None, :] * (1 - top[:, None]) + TAUPE[None, :] * top[:, None]
-    head = np.clip((y - 39) / 3, 0, 1) * np.clip((15 - z) / 4, 0, 1)                                    # 정수리 · 뒤통수
-    col = col * (1 - head[:, None]) + (TAUPE * 1.05)[None, :] * head[:, None]
-    blaze = np.exp(-((x / 1.6) ** 2 + ((z - 15) / 4) ** 2)) * np.clip((y - 43) / 2, 0, 1)               # 이마 흰 줄
-    col = col * (1 - blaze[:, None]) + BLAZE[None, :] * blaze[:, None]
-    for k in ('eye0', 'eye1'):                                                                          # 눈가 얼룩
-        e = np.exp(-np.sum((g - (J[k] + np.array([0, .8, -1.5]))) ** 2, 1) / 9.0)
-        col = col * (1 - .55 * e[:, None]) + BROWN[None, :] * (.55 * e[:, None])
-    tl = np.clip(-(z + 19) / 2, 0, 1)
-    col = col * (1 - tl[:, None]) + (TAUPE * .95)[None, :] * tl[:, None]
-    tiptail = np.clip((y - 24) / 3, 0, 1) * tl
-    col = col * (1 - tiptail[:, None]) + CREAM[None, :] * tiptail[:, None]
+    def mix(c, w, col2):
+        return c * (1 - w[:, None]) + np.asarray(col2)[None, :] * w[:, None]
+    col = np.tile(TAN, (len(g), 1))
+    top = np.clip((y - 18) / 6, 0, 1) * np.clip(1 - np.abs(x) / 11, 0, 1) * np.clip((-z + 10) / 8, 0, 1)   # 등 · 엉덩이
+    col = mix(col, .55 * top, GRAYB)
+    low = np.clip((9 - y) / 6, 0, 1)                                                                     # 다리 아래 · 발
+    col = mix(col, .65 * low, CREAM)
+    chest = np.exp(-(((y - 25) / 6) ** 2 + (x / 6) ** 2)) * np.clip((z - 8) / 4, 0, 1)
+    col = mix(col, .45 * chest, CREAM)
+    muzzle = np.exp(-(((y - 37.5) / 3.6) ** 2 + (x / 5.5) ** 2 + ((z - 17) / 4.5) ** 2))
+    col = mix(col, .7 * muzzle, BLAZE)
+    head = np.clip((y - 41) / 3, 0, 1) * np.clip((16 - z) / 5, 0, 1)                                    # 정수리 · 뒤통수
+    col = mix(col, .7 * head, BROWN * 1.3)
+    for k in ('eye0', 'eye1'):                                                                          # 눈가 진한 갈색
+        e = np.exp(-np.sum((g - (J[k] + np.array([0, .8, -1.5]))) ** 2, 1) / 14.0)
+        col = mix(col, .75 * e, BROWN)
+    tl = np.clip(-(z + 19) / 2, 0, 1)                                                                   # 꼬리
+    col = mix(col, .5 * tl, TAN * 1.05)
+    tiptail = np.clip((y - 27) / 5, 0, 1) * tl
+    col = mix(col, .5 * tiptail, CREAM)
     return col
 
 # =====================================================================================
@@ -295,6 +331,7 @@ def add_card(P, N, F, L, w0, w1, droop=.25, lift=.004, twist=0.0, col=(1, 1, 1))
         t = k / 5
         pts.append(P - N * .002 + F * (L * t) + N * (lift * math.sin(math.pi * t * .8)) + down * (L * droop * t * t))
         ws.append(w0 + (w1 - w0) * t)
+    pts = [Vector((p_.x, p_.y, max(p_.z, .003))) for p_ in pts]                                   # 처진 발목 털이 바닥 밑으로 들어가지 않게 (바닥 위 0.3 cm)
     o = odd.ribbon('_card', pts, ws, normal_hint=N, twist=[twist * t / 5 for t in range(6)])
     ca = o.data.color_attributes.new('Color', 'FLOAT_COLOR', 'POINT')
     for i in range(len(o.data.vertices)):
@@ -318,8 +355,9 @@ def flow_at(g, n_g):
     return flow_field(g[None, :], n_g[None, :])[0]
 
 def ear_color(g):
-    up = np.clip((g[:, 1] - 38) / 4, 0, 1)[:, None]
-    return BROWN[None, :] * 1.05 * (1 - up) + (TAUPE * .9)[None, :] * up
+    up = np.clip((g[:, 1] - 40) / 4, 0, 1)[:, None]; tip = np.clip((32 - g[:, 1]) / 4, 0, 1)[:, None]
+    c = BROWN[None, :] * 1.05 * (1 - up) + (TAUPE * .9)[None, :] * up
+    return c * (1 - .5 * tip) + (TAN * .9)[None, :] * (.5 * tip)                 # 귀 끝은 살짝 황갈색으로 바랜다
 def put(o, mask_fn, count, seed, L, w, droop=.3, rot=0.0, flow_bias=(0, 0, 0), colfn=None):
     r_ = np.random.default_rng(seed + 100)
     for P, N, g, n_g in sample(o, mask_fn, count, seed):
@@ -334,11 +372,15 @@ put(body, lambda g, n: (g[:, 1] > 32) & (g[:, 1] < 39) & (g[:, 2] > 12) & (np.ab
 for k in ('eye0', 'eye1'):                                                                                                       # 눈썹
     e = J[k]
     put(body, lambda g, n, e=e: (np.linalg.norm(g - (e + np.array([0, 3.0, -.8])), axis=1) < 2.4) & (n[:, 2] > .1), 12, 4 + int(e[0] > 0), (2.4, 3.4), 1.6, .25, .6, flow_bias=(0, .2, 1.2))
-put(body, lambda g, n: (g[:, 1] < 9.5) & (g[:, 1] > 2.5) & (np.abs(g[:, 0]) > 3) & (n[:, 1] < .4), 46, 6, (2.0, 3.2), 1.8, .35, .6)   # 다리 · 발목
+put(body, lambda g, n: (g[:, 1] < 12) & (g[:, 1] > 2.0) & (np.abs(g[:, 0]) > 3) & (n[:, 1] < .4), 80, 6, (2.4, 3.8), 1.8, .35, .7)   # 다리 · 발목 (털 장화)
 put(body, lambda g, n: (g[:, 2] < -18) & (g[:, 1] > 16), 26, 7, (3.5, 5.0), 2.4, .15, .8)                                        # 꼬리
-put(body, lambda g, n: (g[:, 1] > 51) & (n[:, 1] > .5), 12, 8, (3.0, 4.0), 2.2, .4, .6)                                          # 정수리
+put(body, lambda g, n: (g[:, 1] > 50) & (n[:, 1] > .35), 34, 8, (3.2, 5.0), 2.2, .2, .9)                                          # 정수리 (솟아 흐트러진 털)
+put(body, lambda g, n: (g[:, 1] > 13) & (g[:, 1] < 27) & (np.abs(g[:, 0]) > 5) & (np.abs(n[:, 0]) > .45), 110, 9, (4.0, 6.4), 2.6, .4, .7)   # 몸 옆
+put(body, lambda g, n: (g[:, 1] > 22) & (n[:, 1] > .45) & (g[:, 2] < 6), 60, 10, (3.6, 5.6), 2.6, .25, .8)                            # 등
+put(body, lambda g, n: (g[:, 1] > 34) & (g[:, 1] < 46) & (np.abs(g[:, 0]) > 6.5) & (g[:, 2] > 6), 40, 11, (3.0, 4.6), 2.0, .35, .7)   # 볼 · 귀 앞
+put(body, lambda g, n: (g[:, 2] < -18) & (g[:, 1] > 22), 50, 12, (5.0, 7.5), 2.8, .1, 1.0)                                             # 깃털 꼬리 (길게)
 for i, eo in enumerate(ears):
-    put(eo, lambda g, n: g[:, 1] < (g[:, 1].min() + 6.0), 22, 20 + i, (3.0, 4.6), 2.4, .35, .6, colfn=ear_color)                   # 귀 끝 (귀 색)
+    put(eo, lambda g, n: g[:, 1] < (g[:, 1].min() + 7.0), 30, 20 + i, (3.6, 6.0), 2.4, .45, .6, colfn=ear_color)                   # 귀 끝 (귀 색 · 길게 늘어진 털)
     put(eo, lambda g, n: (np.abs(n[:, 0]) < .5) & (g[:, 1] < g[:, 1].max() - 3), 16, 30 + i, (2.2, 3.4), 2.0, .4, .7, colfn=ear_color)  # 귀 앞 · 뒤 가장자리
 fur_cards = odd.join(cards, 'Buddy_FurCards')
 fur_cards.data.materials.append(card_m)
@@ -386,7 +428,7 @@ colb = bpy.data.objects.new('_colb', body.data.copy()); odd.link(colb)
 odd.cloth_sim(tie, frames=50, pin_group='pin', colliders=[colb], quality=8, mass=.05, tension=20, bending=2.0, collide_dist=.0015, thickness_outer=.004)
 odd.delete(colb)
 odd.solidify(tie, .0012, offset=1); odd.subsurf(tie, 1)
-# 이름표: 놋쇠 테 + 파란 에나멜 + 노란 BUDDY (D링에 매달림)
+# 이름표: 둥근 놋쇠 + 새긴 BUDDY (D링에 매달림)
 tc_ = front + gdir(np.array([2.6, -2.2, .4])) * .01
 tag = odd.sdf_mesh('_tag', lambda p: odd.smax(np.linalg.norm((p - np.array(tc_))[:, [0, 2]], axis=1) - .0125, np.abs((p - np.array(tc_))[:, 1]) - .0009, .0006),
                    np.array(tc_) - .016, np.array(tc_) + .016, .00025)
@@ -438,7 +480,10 @@ def fur_h(p, n):
     fine, _, ph, lp = strands_h(g_, n_g_, 3)
     return fine * .5 + soft_ph(ph) * .28 + lp * .4
 
-odd.uv_smart(body, 60, .003)
+# 털 셰이딩 법선: 다발 층 아래를 보는 턱 면이 빛을 못 받아 검은 줄(호랑이 무늬)이 되지 않게, 부풀리기 전 몸의 법선을 섞는다.
+# 모양(실루엣 · 층)은 그대로 — 빛만 털 덩어리처럼 부드럽게 퍼진다. 결은 노멀맵이 맡는다.
+_cur = odd.nrm(body); _N = .4 * _cur + .6 * N0_BODY; _N /= np.linalg.norm(_N, axis=1, keepdims=True)
+body.data.normals_split_custom_set_from_vertices([tuple(v) for v in _N])
 Sb = tex.Surf(body, 2048); g = to_game_cm(Sb.p); n_g = np.stack([Sb.n[:, 0], Sb.n[:, 2], -Sb.n[:, 1]], 1)
 fine, hsh, ph, lp = strands_h(g, n_g, 3)
 face = np.clip((g[:, 1] - 33) / 3, 0, 1) * np.clip((g[:, 2] - 8) / 4, 0, 1)
@@ -454,7 +499,8 @@ odd.uv_smart(ears[0], 60, .004)
 Se = tex.Surf(ears[0], 1024); g = to_game_cm(Se.p); n_g = np.stack([Se.n[:, 0], Se.n[:, 2], -Se.n[:, 1]], 1)
 fine, hsh, ph, lp = strands_h(g, n_g, 7)
 ecol = BROWN[None, :] * (.9 + .35 * hsh)[:, None] * (.85 + .18 * np.clip(soft_ph(ph) * 1.3, 0, 1))[:, None] * (.9 + .12 * fine)[:, None]
-ecol = ecol * (1 - np.clip((g[:, 1] - 38) / 4, 0, 1))[:, None] + (TAUPE * .9)[None, :] * np.clip((g[:, 1] - 38) / 4, 0, 1)[:, None]
+ecol = ecol * (1 - np.clip((g[:, 1] - 40) / 4, 0, 1))[:, None] + (TAUPE * .9)[None, :] * np.clip((g[:, 1] - 40) / 4, 0, 1)[:, None]
+_tip = np.clip((32 - g[:, 1]) / 4, 0, 1)[:, None]; ecol = ecol * (1 - .5 * _tip) + (TAN * .9)[None, :] * (.5 * _tip)
 ear_m = tex.material('Buddy_Ear', TD, Se.img(np.clip(ecol, 0, 1)), Se.img(.66 + .06 * fine), tex.bump(Se, fur_h, .0008, 1.2), sheen=(.7, .45, (1, .93, .82, 1)))
 ear_tex_done = True
 # 귀 1은 귀 0의 거울 복제 → UV · 재질을 함께 쓰도록 다시 복제
@@ -494,30 +540,37 @@ ncol *= (1 - .7 * nostril)[:, None]
 nose_m = tex.material('Buddy_Nose', TD, Sn.img(ncol), Sn.img(.42 - .15 * pebble), tex.h2n(Sn.img(pebble), 2.0), coat=(.35, .2))
 nose.data.materials.append(nose_m)
 
-# 넥타이: 파랑 + 노란 사선 줄무늬 (천 결) · 목걸이: 파란 가죽 (박음질) · 이름표: 놋쇠 테 + 파란 에나멜 + 노란 BUDDY
+# 넥타이: 짙은 남색 + 금색 사선 줄무늬 (천 결) · 목걸이: 남색 가죽 (박음질) · 이름표: 놋쇠 + 새긴 BUDDY
 from PIL import Image, ImageDraw, ImageFont
 T_ = 512; yy, xx = (np.mgrid[0:T_, 0:T_] + .5) / T_
-stripe = (((xx + yy * 1.6) * 7) % 1.0 < .22)
-tcol = np.where(stripe[..., None], np.array([.95, .78, .16]), np.array([.10, .22, .62]))
+_sv = ((xx + yy * 1.6) * 3.6) % 1.0
+stripe = (_sv < .13) | (np.abs(_sv - .22) < .025)                                       # 굵은 금색 줄 + 가는 줄 (콘셉트 넥타이)
+tcol = np.where(stripe[..., None], np.array([.80, .60, .18]), np.array([.05, .09, .27]))
 weave = (np.sin(xx * 900) * np.sin(yy * 900)) * .5
 tie_m = tex.material('Buddy_Tie', TD, tcol, np.full((T_, T_), .55) + .05 * weave, tex.h2n(weave * .3 + stripe * .2, 1.0), sheen=(.5, .35, (.8, .85, 1, 1)))
 tie.data.materials.append(tie_m); odd.uv_smart(knot, 60, .01); knot.data.materials.append(tie_m)
 odd.uv_smart(collar, 60, .01); Sc = tex.Surf(collar, 512); g = to_game_cm(Sc.p)
 edge = np.clip(1 - np.abs(np.abs(g[:, 1] - cy) - .45) / .06, 0, 1) * (np.sin(np.arctan2(g[:, 2] - 8.8, g[:, 0]) * 160) > 0)
-ccol = np.array([.12, .25, .62])[None, :] * (.85 + .2 * tex.fbm(g, 2.0, 3, seed=9)[:, None]) + edge[:, None] * .3
+ccol = np.array([.06, .10, .28])[None, :] * (.85 + .2 * tex.fbm(g, 2.0, 3, seed=9)[:, None]) + edge[:, None] * .12
 collar_m = tex.material('Buddy_Collar', TD, Sc.img(np.clip(ccol, 0, 1)), Sc.img(.5 - .1 * edge), tex.h2n(Sc.img(edge), 1.5))
 collar.data.materials.append(collar_m)
 c3 = np.array(tc_); planar = tagm.data.uv_layers.new(name='UVMap'); a = odd.co(tagm)
 for poly in tagm.data.polygons:
     for li in poly.loop_indices:
         p_ = a[tagm.data.loops[li].vertex_index] - c3; planar.data[li].uv = (.5 + p_[0] / .027, .5 + p_[2] / .027)
-img = Image.new('RGB', (512, 512), (190, 150, 60)); dr = ImageDraw.Draw(img)
-dr.ellipse([30, 30, 482, 482], fill=(28, 66, 160)); dr.ellipse([30, 30, 482, 482], outline=(222, 182, 80), width=14)
-fnt = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', 92); w_ = dr.textlength('BUDDY', font=fnt)
-dr.text((256 - w_ / 2, 200), 'BUDDY', font=fnt, fill=(248, 206, 52))
-tag_c = np.asarray(img).astype(float)[::-1] / 255
-rim_mask = np.hypot(xx - .5, yy - .5) > .43
-tag_m = tex.material('Buddy_Tag', TD, tag_c, np.where(rim_mask, .3, .2), tex.h2n(rim_mask.astype(float) * .5, 3.0), metal_value=0.0, coat=(1, .05))
+# 놋쇠 이름표: 새긴 BUDDY 글자(어둡게 · 오목) · 닳은 가장자리 · 잔 긁힘 (콘셉트: 둥근 놋쇠 + 새김)
+eng = Image.new('L', (512, 512), 0); dr = ImageDraw.Draw(eng)
+fnt = ImageFont.truetype('/usr/share/fonts/truetype/liberation/LiberationSerif-Bold.ttf', 104); w_ = dr.textlength('BUDDY', font=fnt)
+dr.text((256 - w_ / 2, 196), 'BUDDY', font=fnt, fill=255)
+dr.ellipse([46, 46, 466, 466], outline=255, width=5)
+engr = np.asarray(eng).astype(float)[::-1] / 255
+P3_ = np.stack([xx, yy, np.zeros_like(xx)], -1).reshape(-1, 3)
+scr_ = np.clip(tex.fbm(P3_ * np.array([40, 3, 1]), 1.0, 3, seed=61).reshape(T_, T_) * 1.5 - .6, 0, 1) * .5
+rr_t = np.hypot(xx - .5, yy - .5)
+wear_ = np.clip((rr_t - .40) / .08, 0, 1)
+brass = np.array([.78, .58, .26]) * (1 - .25 * tex.fbm(P3_, 6, 3, seed=62).reshape(T_, T_)[..., None] * .5)
+tag_c = brass * (1 - .7 * engr[..., None]) + np.array([.95, .82, .5]) * (.3 * wear_[..., None])
+tag_m = tex.material('Buddy_Tag', TD, np.clip(tag_c, 0, 1), np.clip(.32 + .3 * engr + .15 * scr_ - .12 * wear_, 0, 1), tex.h2n(-engr * .8 - scr_ * .2, 3.0), metal_value=1.0)
 tagm.data.materials.append(tag_m)
 dring.data.materials.append(odd.gltf_material('Buddy_Ring', base_value=(.82, .68, .35, 1), rough_value=.3, metal_value=1.0))
 
