@@ -1,4 +1,25 @@
 {
-  "_note": "사용자가 디자인 리뷰(review/index.html)에서 눈으로 승인한 GLB만 여기에 적는다. 예: \"assets/characters/vin/chr_vin.glb\": {\"date\": \"YYYY-MM-DD\", \"by\": \"사용자\", \"from\": \"assets/review/chr_vin_review.glb\"}. Claude는 스스로 적지 않는다.",
-  "approved": {}
+  "_note": "사용자가 디자인 리뷰(review/index.html)에서 눈으로 승인한 GLB만 여기에 적는다. 예: \"assets/characters/vin/chr_vin.glb\": {\"date\": \"YYYY-MM-DD\", \"by\": \"사용자\", \"from\": \"assets/review/chr_vin_review.glb\"}. Claude는 스스로 적지 않는다 — 아래는 사용자의 승인 메시지를 옮겨 적은 것이다. partial = 한 파일 안에서 일부만 승인된 디자인.",
+  "approved": {
+    "assets/characters/vin/chr_vin.glb": {
+      "date": "2026-10-14", "by": "사용자", "from": "assets/review/chr_vin_review.glb",
+      "approval": "리뷰 페이지 · 콘셉트 비교 시트를 본 뒤 '적용해줘' (4개 모두)",
+      "game": "메시 · 텍스처는 리뷰 후보 그대로, 게임 리그 연결만 추가 (tools/blender/game_link.py)"
+    },
+    "assets/characters/buddy/npc_buddy.glb": {
+      "date": "2026-10-14", "by": "사용자", "from": "assets/review/npc_buddy_review.glb",
+      "approval": "리뷰 페이지 · 콘셉트 비교 시트를 본 뒤 '적용해줘' (4개 모두)",
+      "game": "메시 · 텍스처는 리뷰 후보 그대로, 게임 리그 연결(몸 · 털 카드 스킨)만 추가 (tools/blender/game_link.py)"
+    },
+    "assets/characters/bully/enemy_bully.glb": {
+      "date": "2026-10-14", "by": "사용자", "from": "assets/review/enemy_bully_review.glb",
+      "approval": "리뷰 페이지 · 콘셉트 비교 시트를 본 뒤 '적용해줘' (4개 모두)",
+      "game": "메시 · 텍스처는 리뷰 후보 그대로, 게임 리그 연결만 추가 — 기타는 게임 기타 노드(무릎 ↔ 등) 좌표로 옮김 (tools/blender/game_link.py)"
+    },
+    "assets/environment/lounge/env_lounge.glb": {
+      "date": "2026-10-14", "by": "사용자", "from": "assets/review/env_lounge_section_review.glb",
+      "approval": "리뷰 페이지 · 콘셉트 비교 시트를 본 뒤 '적용해줘' (4개 모두)",
+      "partial": "승인된 리뷰 구역의 조형 · 재질로 게임 충돌 상자 크기에 맞춰 다시 만든 소파 · 사이드 테이블 · 램프 · 커튼 · 금박 액자 3점 · 러그 · 담요 (tools/blender/lounge_game.py — 게임 크기로 만든 것은 아직 사용자가 따로 보지 않음). 벽 · 마루 · 책장 · 벽난로 · 시계 · 안락의자 · LP 캐비닛 · 스피커 등 나머지는 v2.9 PROTOTYPE"
+    }
+  }
 }

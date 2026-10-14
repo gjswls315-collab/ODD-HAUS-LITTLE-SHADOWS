@@ -29,6 +29,10 @@ v2.9의 `tools/glb`(Three.js 도형 조립)와 달리, 조형 과정을 거쳐 �
 | `buddy.py` | Buddy → `assets/review/npc_buddy_review.glb` |
 | `bully.py` | Bully → `assets/review/enemy_bully_review.glb` |
 | `lounge_section.py` | Lounge 구역 → `assets/review/env_lounge_section_review.glb` |
+| `game_link.py` | **승인 뒤 게임용 캐릭터**: 리뷰 GLB(메시 · 텍스처 그대로) → 게임 리그 연결 GLB. 단단한 부위는 리그 노드(`extras.link`) 밑에, 휘는 부위(팔다리 · 몸통 · 바지 · 털 몸 · 털 카드)는 리그 뼈 스킨(뼈 캡슐 거리 가중치), Bully 기타는 게임 기타 노드 좌표(무릎 ↔ 등)로, 비율 표식(키 · 어깨) |
+| `lounge_game.py` | **승인 뒤 게임용 거실 가구**: 리뷰 구역과 같은 조형 · 재질로 게임 충돌 상자 크기 그대로 — 소파(좌면 0.48 · 팔걸이 0.64 · 등받이 0.86) · 사이드 테이블(상판 0.70 · 선반 0.23) · 램프(게임 빛 자리, 갓 = 게임 재질 `DR.shade`) · 창 양옆 벨벳 커튼 · 금박 액자 3점 + 그림 · 페르시아 러너 · 담요 |
+| `lounge_colliders.json` | 게임 거실 충돌 상자 · 창 · 램프 · 액자 · 러그 자리 (index.html v2.9의 `ODD2.W.colliders`에서 뽑음) |
+| `glb_merge.py` | v2.9 거실 GLB에서 바꾸는 가구 자리만 잘라내고 맞춤 가구 GLB를 붙인다 (텍스처를 다시 압축하지 않는 GLB 수준 합치기 + 안 쓰는 것 정리) |
 
 ## 실행
 
@@ -36,6 +40,10 @@ v2.9의 `tools/glb`(Three.js 도형 조립)와 달리, 조형 과정을 거쳐 �
 python3 -m venv bl && bl/bin/pip install bpy==4.5.14 scikit-image scipy pillow
 node tools/glb/make.js index.html <rigdump_job.js> rigs.json <three 패키지>   # 게임 리그 관절 위치 (rigs.json)
 ODD_OUT=out ODD_RIGS=out/rigs.json bl/bin/python tools/blender/vin.py        # (buddy.py · bully.py · lounge_section.py 같은 방식)
+# 승인 뒤 게임에 넣기 (겉모습만 — 이동 · 점프 · 충돌 · 퍼즐 · AI 코드는 그대로)
+bl/bin/python tools/blender/game_link.py vin assets/review/chr_vin_review.glb out/rigs.json assets/characters/vin/chr_vin.glb      # buddy · bully 같은 방식
+ODD_OUT=out bl/bin/python tools/blender/lounge_game.py                                                                             # → out/game/lounge_fit.glb
+bl/bin/python tools/blender/glb_merge.py <v2.9 env_lounge.glb> out/game/lounge_fit.glb assets/environment/lounge/env_lounge.glb
 ```
 
 게임 리그 관절 위치(`rigs.json`)는 형태를 그 관절에 맞추는 데만 쓴다 — 게임 크기를 바꾸지 않기 위해서다.

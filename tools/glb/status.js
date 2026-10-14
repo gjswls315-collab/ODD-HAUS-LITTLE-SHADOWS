@@ -2,7 +2,7 @@
 // 저장소에 실제로 있는 GLB 파일 · 게임 사용 여부 · 사용자 승인 기록(assets/APPROVED.json)으로 상태를 쓴다. 손으로 "완료"를 적지 않는다.
 //   파일 없음                 → 미완성 (PLACEHOLDER)
 //   파일 있음 · 승인 기록 없음 → PROTOTYPE   (게임이 쓰는지 · 리뷰 후보인지 함께 적는다)
-//   파일 있음 · 승인 기록 있음 → FINAL (승인 날짜)
+//   파일 있음 · 승인 기록 있음 → FINAL (승인 날짜) — 기록에 partial이 있으면 'PROTOTYPE + 부분 승인' (한 파일 안 일부만 승인된 디자인)
 // 측정.json = ?visualtest=1의 ODD2.VT.measure() 결과, 상태.json = 게임의 ODD2.ASSET_STATE (둘 다 선택).
 const fs = require('fs'), path = require('path');
 const ROOT = path.join(__dirname, '..', '..');
@@ -22,7 +22,10 @@ const kb = n => (n / 1024 / 1024).toFixed(2) + ' MB';
 function status(rel, used) {
   const f = path.join(ROOT, rel); if (!fs.existsSync(f)) return { ok: false, text: '미완성 (PLACEHOLDER)' };
   const I = glbInfo(f); if (I.bad) return { ok: true, I, text: '불량 — ' + I.bad };
+  if (APPROVED[rel] && APPROVED[rel].partial) return { ok: true, I, text: `PROTOTYPE + **부분 승인** (${APPROVED[rel].date || ''}: ${APPROVED[rel].partial})` };   // v3.0: 한 파일 안에서 일부만 승인된 디자인 (거실)
   if (APPROVED[rel]) return { ok: true, I, text: `**FINAL** (승인 ${APPROVED[rel].date || ''})` };
+  const into = Object.keys(APPROVED).find(k => APPROVED[k].from === rel);      // v3.0: 승인돼 게임 파일로 반영된 리뷰 후보
+  if (into) return { ok: true, I, text: `리뷰 후보 · 승인 ${APPROVED[into].date || ''} → 게임 파일 \`${into}\`` };
   const where = rel.startsWith('assets/review/') ? '리뷰 후보 · 게임 미사용' : used === 'glb' ? '게임 사용 중' : used ? '게임 미사용 (' + used + ')' : '게임 경로';
   return { ok: true, I, text: `PROTOTYPE (${where} · 승인 전)` };
 }

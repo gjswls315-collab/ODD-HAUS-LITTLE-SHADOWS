@@ -42,7 +42,7 @@ canvas { display: block; width: 100%; height: 100%; touch-action: none; }
   <div class="row"><span class="lab">카메라</span>
     <button data-v="front">앞</button><button data-v="side">옆</button><button data-v="back">뒤</button><button data-v="q34">3/4</button><button data-v="close">클로즈업</button><button data-v="spin">회전</button></div>
   <div class="row"><span class="lab">조명</span><button data-l="studio" class="on">중립 스튜디오</button><button data-l="game">게임 조명</button></div>
-  <div class="row"><span class="lab">보기</span><button data-x="concept">콘셉트 시트</button><button data-x="compare">v2.9 PROTOTYPE과 비교</button><button data-x="clay">형태만(점토)</button><button data-x="wire">토폴로지(와이어)</button></div>
+  <div class="row"><span class="lab">보기</span><button data-x="concept">콘셉트 시트</button><button data-x="compare">지금 게임 GLB와 비교</button><button data-x="clay">형태만(점토)</button><button data-x="wire">토폴로지(와이어)</button></div>
   <div id="info"></div>
 </div>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
@@ -143,7 +143,7 @@ for (const S of SUBJECTS) {
 }
 function tagText(it, old) {
   const S = it.S;
-  if (old) return `<b>${S.name}</b> <span class="o">v2.9 PROTOTYPE (지금 게임)</span>`;
+  if (old) return `<b>${S.name}</b> <span class="o">지금 게임 (v3.0 · 리그 연결)</span>`;
   if (!it.cand) return `<b>${S.name}</b> <span class="o">리뷰 후보 없음</span>`;
   return `<b>${S.name}</b> <span class="p">PROTOTYPE · 리뷰 후보</span>`;
 }
